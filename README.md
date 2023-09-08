@@ -8,7 +8,7 @@
 4. `dev_overrides` inside the file needs to be `"hashicorp.com/edu/downtozero" = "/home/<user>/go/bin"`
     - the right side needs to be an absolute path and it needs to be the **folder** your go binaries are saved in!
 5. go into this repo and `go mod tidy` to install all dependencies `go install .` to install this provider as a binary
-6. go into `examples/provider-install-verification` and `terraform plan`
+6. go into `examples/provider-install-verification` and `terraform plan` (do not use `terraform init`, it has no effect)
 7. if terraform is angry about Missing API Endpoints, Username etc., you did everything right and can start developing
 
 ---

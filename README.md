@@ -1,19 +1,26 @@
 # DownToZero Terraform Provider
 
+## READ THIS
+
+* Read "how to use this" if you are new!
+* The model for `containerservices` is based on one users response, the model might currently be incomplete!
+* Any change inside the go module (main.go/provider.go etc.) is only visible after rebuild with `go install .`! It's easiest to have two consoles open.
+
 ## How to use this
 
 1. make sure you have go and terraform installed
 2. clone this repo
-3. create a new terraformrc file, see [this guide](https://developer.hashicorp.com/terraform/tutorials/providers-plugin-framework/providers-plugin-framework-provider#prepare-terraform-for-local-provider-install)
-4. `dev_overrides` inside the file needs to be `"hashicorp.com/edu/downtozero" = "/home/<user>/go/bin"`
-    - the right side needs to be an absolute path and it needs to be the **folder** your go binaries are saved in!
-5. go into this repo and `go mod tidy` to install all dependencies `go install .` to install this provider as a binary
-6. go into `examples/provider-install-verification` and `terraform plan` (do not use `terraform init`, it has no effect)
-7. if terraform is angry about Missing API Endpoints, Username etc., you did everything right and can start developing
-
----
-Any change inside the go module (main.go/provider.go etc.) is only visible after rebuild with `go install .`! It's easiest to have two consoles open.
+3. create a new terraformrc file
+    * mac: `echo 'provider_installation { dev_overrides { "hashicorp.com/edu/downtozero" = "/Users/<Username>/go/bin"} direct {}}' > ~/.terraformrc`
+    * linux: `echo 'provider_installation { dev_overrides { "hashicorp.com/edu/downtozero" = "/home/<Username>/go/bin"} direct {}}' > ~/.terraformrc`
+    * the right side needs to be an absolute path and it needs to be the **folder** your go binaries are saved in!
+4. go into this repo and `go mod tidy` to install all dependencies `go install .` to install this provider as a binary
+5. Make sure you have an API Key from DTZ for a project with containerservices enabled
+6. go into `examples/provider-install-verification` and add your APIKEY to `main.tf`
+7. `terraform plan` (do not use `terraform init`, it has no effect)
+8. Terraform should print out the containerservices for this apikey
 
 ## References
 
-[Hashicorp Guide](https://developer.hashicorp.com/terraform/tutorials/providers-plugin-framework/providers-plugin-framework-provider)
+* [Hashicorp Guide](https://developer.hashicorp.com/terraform/tutorials/providers-plugin-framework/providers-plugin-framework-provider)
+* logging (to log out a struct): `tflog.Info(fmt.Sprintf("%+v", yourstruct))`

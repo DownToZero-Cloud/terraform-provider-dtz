@@ -7,7 +7,12 @@ terraform {
 }
 
 provider "downtozero" {
-
+  apikey = "<add-me>"
 }
 
-data "downtozero_coffees" "test" {}
+data "downtozero_containerservices" "test" {}
+
+output "downtozero_containerservices" {
+  description = "Testing output"
+  value       = data.downtozero_containerservices.test
+}

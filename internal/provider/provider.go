@@ -5,7 +5,6 @@ package provider
 
 import (
 	"context"
-	"net/http"
 	"os"
 
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
@@ -29,9 +28,7 @@ type DowntozeroProvider struct {
 
 // DowntozeroProviderModel describes the provider data model.
 type DowntozeroProviderModel struct {
-	Endpoint types.String `tfsdk:"endpoint"`
-	Username types.String `tfsdk:"username"`
-	Password types.String `tfsdk:"password"`
+	Apikey types.String `tfsdk:"apikey"`
 }
 
 func (p *DowntozeroProvider) Metadata(ctx context.Context, req provider.MetadataRequest, resp *provider.MetadataResponse) {
@@ -42,14 +39,8 @@ func (p *DowntozeroProvider) Metadata(ctx context.Context, req provider.Metadata
 func (p *DowntozeroProvider) Schema(ctx context.Context, req provider.SchemaRequest, resp *provider.SchemaResponse) {
 	resp.Schema = schema.Schema{
 		Attributes: map[string]schema.Attribute{
-			"endpoint": schema.StringAttribute{
-				Optional: true,
-			},
-			"username": schema.StringAttribute{
-				Optional: true,
-			},
-			"password": schema.StringAttribute{
-				Optional:  true,
+			"apikey": schema.StringAttribute{
+				Required:  true,
 				Sensitive: true,
 			},
 		},
@@ -68,30 +59,12 @@ func (p *DowntozeroProvider) Configure(ctx context.Context, req provider.Configu
 	// If practitioner provided a configuration value for any of the
 	// attributes, it must be a known value.
 
-	if config.Endpoint.IsUnknown() {
+	if config.Apikey.IsUnknown() {
 		resp.Diagnostics.AddAttributeError(
-			path.Root("endpoint"),
-			"Unknown DownToZero API Endpoint",
-			"The provider cannot create the DownToZero API client as there is an unknown configuration value for the DownToZero API endpoint. "+
-				"Either target apply the source of the value first, set the value statically in the configuration, or use the DOWNTOZERO_ENDPOINT environment variable.",
-		)
-	}
-
-	if config.Username.IsUnknown() {
-		resp.Diagnostics.AddAttributeError(
-			path.Root("username"),
-			"Unknown DownToZero API Username",
-			"The provider cannot create the DownToZero API client as there is an unknown configuration value for the DownToZero API username. "+
-				"Either target apply the source of the value first, set the value statically in the configuration, or use the DOWNTOZERO_USERNAME environment variable.",
-		)
-	}
-
-	if config.Password.IsUnknown() {
-		resp.Diagnostics.AddAttributeError(
-			path.Root("password"),
-			"Unknown DownToZero API Password",
-			"The provider cannot create the DownToZero API client as there is an unknown configuration value for the DownToZero API password. "+
-				"Either target apply the source of the value first, set the value statically in the configuration, or use the DOWNTOZERO_PASSWORD environment variable.",
+			path.Root("apikey"),
+			"Unknown DownToZero API Apikey",
+			"The provider cannot create the DownToZero API client as there is an unknown configuration value for the DownToZero API apikey. "+
+				"Either target apply the source of the value first, set the value statically in the configuration, or use the DOWNTOZERO_APIKEY environment variable.",
 		)
 	}
 
@@ -102,51 +75,23 @@ func (p *DowntozeroProvider) Configure(ctx context.Context, req provider.Configu
 	// Default values to environment variables, but override
 	// with Terraform configuration value if set.
 
-	endpoint := os.Getenv("DOWNTOZERO_ENDPOINT")
-	username := os.Getenv("DOWNTOZERO_USERNAME")
-	password := os.Getenv("DOWNTOZERO_PASSWORD")
+	apikey := os.Getenv("DOWNTOZERO_APIKEY")
+	apiname := "containers"
+	apiversion := "2021-02-21"
 
-	if !config.Endpoint.IsNull() {
-		endpoint = config.Endpoint.ValueString()
-	}
-
-	if !config.Username.IsNull() {
-		username = config.Username.ValueString()
-	}
-
-	if !config.Password.IsNull() {
-		password = config.Password.ValueString()
+	if !config.Apikey.IsNull() {
+		apikey = config.Apikey.ValueString()
 	}
 
 	// If any of the expected configurations are missing, return
 	// errors with provider-specific guidance.
 
-	if endpoint == "" {
+	if apikey == "" {
 		resp.Diagnostics.AddAttributeError(
-			path.Root("endpoint"),
-			"Missing DownToZero API Endpoint",
-			"The provider cannot create the DownToZero API client as there is a missing or empty value for the DownToZero API endpoint. "+
-				"Set the endpoint value in the configuration or use the DOWNTOZERO_HOST environment variable. "+
-				"If either is already set, ensure the value is not empty.",
-		)
-	}
-
-	if username == "" {
-		resp.Diagnostics.AddAttributeError(
-			path.Root("username"),
-			"Missing DownToZero API Username",
-			"The provider cannot create the DownToZero API client as there is a missing or empty value for the DownToZero API username. "+
-				"Set the username value in the configuration or use the DOWNTOZERO_USERNAME environment variable. "+
-				"If either is already set, ensure the value is not empty.",
-		)
-	}
-
-	if password == "" {
-		resp.Diagnostics.AddAttributeError(
-			path.Root("password"),
-			"Missing DownToZero API Password",
-			"The provider cannot create the DownToZero API client as there is a missing or empty value for the DownToZero API password. "+
-				"Set the password value in the configuration or use the DOWNTOZERO_PASSWORD environment variable. "+
+			path.Root("apikey"),
+			"Missing DownToZero API Apikey",
+			"The provider cannot create the DownToZero API client as there is a missing or empty value for the DownToZero API apikey. "+
+				"Set the apikey value in the configuration or use the DOWNTOZERO_APIKEY environment variable. "+
 				"If either is already set, ensure the value is not empty.",
 		)
 	}
@@ -155,9 +100,17 @@ func (p *DowntozeroProvider) Configure(ctx context.Context, req provider.Configu
 		return
 	}
 
-	// Make the client available during DataSource and Resource
-	// type Configure methods.
-	client := http.DefaultClient
+	// Create a new Downtozero client using the configuration values
+	client, err := NewClient(&apiname, &apiversion, &apikey)
+	if err != nil {
+		resp.Diagnostics.AddError(
+			"Unable to Create Downtozero API Client",
+			"An unexpected error occurred when creating the Downtozero API client. "+
+				"If the error is not clear, please contact the provider developers.\n\n"+
+				"Downtozero Client Error: "+err.Error(),
+		)
+		return
+	}
 	resp.DataSourceData = client
 	resp.ResourceData = client
 }
@@ -171,7 +124,7 @@ func (p *DowntozeroProvider) Resources(ctx context.Context) []func() resource.Re
 // DataSources defines the data sources implemented in the provider.
 func (p *DowntozeroProvider) DataSources(_ context.Context) []func() datasource.DataSource {
 	return []func() datasource.DataSource{
-		NewCoffeesDataSource,
+		NewContainersDataSource,
 	}
 }
 

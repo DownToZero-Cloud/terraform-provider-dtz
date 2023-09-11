@@ -39,7 +39,7 @@ func NewClient(section *string, version *string, apikey *string) (*Client, error
 	return &c, nil
 }
 
-func (c *Client) doRequest(req *http.Request) ([]byte, error) {
+func (c *Client) doRequest(req *http.Request) (int, []byte, error) {
 
 	// set auth headers
 	req.Header.Set("Content-Type", "application/json")
@@ -47,18 +47,14 @@ func (c *Client) doRequest(req *http.Request) ([]byte, error) {
 
 	res, err := c.HTTPClient.Do(req)
 	if err != nil {
-		return nil, err
+		return 0, nil, err
 	}
 	defer res.Body.Close()
 
 	body, err := ioutil.ReadAll(res.Body)
 	if err != nil {
-		return nil, err
+		return 0, nil, err
 	}
 
-	if res.StatusCode != http.StatusOK {
-		return nil, fmt.Errorf("status: %d, body: %s", res.StatusCode, body)
-	}
-
-	return body, err
+	return res.StatusCode, body, err
 }

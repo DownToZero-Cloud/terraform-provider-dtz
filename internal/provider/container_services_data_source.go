@@ -19,7 +19,7 @@ var (
 )
 
 // NewcontainersDataSource is a helper function to simplify the provider implementation.
-func NewContainersDataSource() datasource.DataSource {
+func NewContainerServicesDataSource() datasource.DataSource {
 	return &containersDataSource{}
 }
 
@@ -30,7 +30,7 @@ type containersDataSource struct {
 
 // Metadata returns the data source type name.
 func (d *containersDataSource) Metadata(_ context.Context, req datasource.MetadataRequest, resp *datasource.MetadataResponse) {
-	resp.TypeName = req.ProviderTypeName + "_containerservices"
+	resp.TypeName = req.ProviderTypeName + "_container_services"
 }
 
 // Schema defines the schema for the data source.
@@ -156,8 +156,8 @@ func (c *Client) GetContainerServices() ([]ContainersDomains, error) {
 		return nil, err
 	}
 
-	body, err := c.doRequest(req)
-	if err != nil {
+	status, body, err := c.doRequest(req)
+	if err != nil || status != 200 {
 		return nil, err
 	}
 

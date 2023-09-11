@@ -23,4 +23,4 @@
 ## References
 
 * [Hashicorp Guide](https://developer.hashicorp.com/terraform/tutorials/providers-plugin-framework/providers-plugin-framework-provider)
-* logging (to log out a struct): `tflog.Info(fmt.Sprintf("%+v", yourstruct))`
+* logging (to log out a struct): `tflog.Info(ctx, fmt.Sprintf("%+v", yourstruct))`

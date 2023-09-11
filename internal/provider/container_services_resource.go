@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"net/http"
 	"strings"
-	"time"
 
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
@@ -190,21 +189,22 @@ func (c *Client) CreateDomain(ctx context.Context, containerServices ContainerSe
 		return nil, err
 	}
 
-	var body []byte
-
-	for {
-		var status int
-		status, body, err = c.doRequest(req)
-		if b := string(body[:]); status == 500 && b == "\"issue certificate failed\"" {
-			tflog.Info(ctx, "Waiting for Certificate Request to be done...")
-			tflog.Debug(ctx, fmt.Sprintf("status: %d, body: %s", status, string(body[:])))
-			time.Sleep(10 * time.Second)
-			continue
-		} else {
-			tflog.Debug(ctx, fmt.Sprintf("+++++++++++status: %d, body: %s", status, string(body[:])))
-			break
-		}
-	}
+	// var body []byte
+	status, body, err := c.doRequest(req)
+	tflog.Debug(ctx, fmt.Sprintf("status: %d, body: %s", status, string(body[:])))
+	// for {
+	// 	var status int
+	// 	status, body, err = c.doRequest(req)
+	// 	if b := string(body[:]); status == 500 && b == "\"issue certificate failed\"" {
+	// 		tflog.Info(ctx, "Waiting for Certificate Request to be done...")
+	// 		tflog.Debug(ctx, fmt.Sprintf("status: %d, body: %s", status, string(body[:])))
+	// 		time.Sleep(10 * time.Second)
+	// 		continue
+	// 	} else {
+	// 		tflog.Debug(ctx, fmt.Sprintf("+++++++++++status: %d, body: %s", status, string(body[:])))
+	// 		break
+	// 	}
+	// }
 
 	if err != nil {
 		return nil, err

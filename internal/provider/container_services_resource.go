@@ -152,7 +152,7 @@ func (r *containersResource) Create(ctx context.Context, req resource.CreateRequ
 			containersRoutingModel.ServiceDefinition = serviceDefinition
 			containersDomainsModel.Routing = append(containersDomainsModel.Routing, containersRoutingModel)
 		}
-
+		plan.Domains = nil
 		plan.Domains = append(plan.Domains, containersDomainsModel)
 	}
 

@@ -126,7 +126,6 @@ func (r *containersResource) Create(ctx context.Context, req resource.CreateRequ
 	// Create new containerservice
 
 	new_domains, err := r.client.CreateDomain(ctx, wrapper)
-	tflog.Error(ctx, err.Error())
 
 	if err != nil {
 		resp.Diagnostics.AddError(
@@ -136,6 +135,8 @@ func (r *containersResource) Create(ctx context.Context, req resource.CreateRequ
 		return
 	}
 
+	tflog.Info(ctx, fmt.Sprintf("new_domains -------\n%+v\n", new_domains))
+	tflog.Info(ctx, fmt.Sprintf("plan1 -------\n%+v\n", plan))
 	// Map response body to model
 	for _, domain := range new_domains {
 		var containersDomainsModel containersDomainsModel
@@ -155,6 +156,8 @@ func (r *containersResource) Create(ctx context.Context, req resource.CreateRequ
 		plan.Domains = append(plan.Domains, containersDomainsModel)
 	}
 
+	tflog.Info(ctx, fmt.Sprintf("plan2 -------\n%+v\n", plan))
+
 	// Set state to fully populated data
 	diags = resp.State.Set(ctx, plan)
 	resp.Diagnostics.Append(diags...)
@@ -165,6 +168,51 @@ func (r *containersResource) Create(ctx context.Context, req resource.CreateRequ
 
 // Read refreshes the Terraform state with the latest data.
 func (r *containersResource) Read(ctx context.Context, req resource.ReadRequest, resp *resource.ReadResponse) {
+	// Get current state
+	var state containerServiceModel
+	diags := req.State.Get(ctx, &state)
+	resp.Diagnostics.Append(diags...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	// Get refreshed container service
+	new_domains, err := r.client.GetContainerServices(ctx)
+	if err != nil {
+		resp.Diagnostics.AddError(
+			"Error Reading container services",
+			"Could not read container service "+err.Error(),
+		)
+		return
+	}
+
+	// Overwrite items with refreshed state
+	state.Domains = []containersDomainsModel{}
+
+	for _, domain := range new_domains {
+		var containersDomainsModel containersDomainsModel
+		containersDomainsModel.Name = types.StringValue(domain.Name)
+
+		for _, routing := range domain.Routing {
+			var containersRoutingModel containersRoutingModel
+			containersRoutingModel.Prefix = types.StringValue(routing.Prefix)
+
+			var serviceDefinition containersServiceDefinitionModel
+			serviceDefinition.ContainerImage = types.StringValue(routing.ServiceDefinition.ContainerImage)
+
+			containersRoutingModel.ServiceDefinition = serviceDefinition
+			containersDomainsModel.Routing = append(containersDomainsModel.Routing, containersRoutingModel)
+		}
+
+		state.Domains = append(state.Domains, containersDomainsModel)
+	}
+
+	// Set refreshed state
+	diags = resp.State.Set(ctx, &state)
+	resp.Diagnostics.Append(diags...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
 }
 
 // Update updates the resource and sets the updated Terraform state on success.
@@ -191,7 +239,16 @@ func (c *Client) CreateDomain(ctx context.Context, containerServices ContainerSe
 
 	// var body []byte
 	status, body, err := c.doRequest(req)
-	tflog.Debug(ctx, fmt.Sprintf("status: %d, body: %s", status, string(body[:])))
+
+	if err != nil {
+		return nil, err
+	}
+
+	string_body := string(body[:])
+	string_body = strings.Trim(string_body, "\"")
+	string_body = strings.ReplaceAll(string_body, "\\\"", "\"")
+	tflog.Debug(ctx, fmt.Sprintf("status: %d, body: '%s'\n\n\n", status, string_body))
+
 	// for {
 	// 	var status int
 	// 	status, body, err = c.doRequest(req)
@@ -206,15 +263,10 @@ func (c *Client) CreateDomain(ctx context.Context, containerServices ContainerSe
 	// 	}
 	// }
 
-	if err != nil {
-		return nil, err
-	}
-
-	tflog.Debug(ctx, fmt.Sprintf("%+v", string(body[:])))
-
 	container_services := ContainerServices{}
-	err = json.Unmarshal(body, &container_services)
+	err = json.Unmarshal([]byte(string_body), &container_services)
 	if err != nil {
+		fmt.Println("aha")
 		return nil, err
 	}
 	return container_services.Domains, nil

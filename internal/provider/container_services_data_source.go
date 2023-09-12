@@ -7,6 +7,7 @@ import (
 	"net/http"
 
 	"github.com/hashicorp/terraform-plugin-framework/types"
+	"github.com/hashicorp/terraform-plugin-log/tflog"
 
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
 	"github.com/hashicorp/terraform-plugin-framework/datasource/schema"
@@ -114,7 +115,7 @@ type containersServiceDefinitionModel struct {
 func (d *containersDataSource) Read(ctx context.Context, req datasource.ReadRequest, resp *datasource.ReadResponse) {
 	var state containerServiceModel
 
-	containersdomains, err := d.client.GetContainerServices()
+	containersdomains, err := d.client.GetContainerServices(ctx)
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Unable to Read DownToZero container services",
@@ -149,7 +150,7 @@ func (d *containersDataSource) Read(ctx context.Context, req datasource.ReadRequ
 }
 
 // Getcontainers - Returns list of containers (no auth required)
-func (c *Client) GetContainerServices() ([]ContainersDomains, error) {
+func (c *Client) GetContainerServices(ctx context.Context) ([]ContainersDomains, error) {
 
 	req, err := http.NewRequest("GET", fmt.Sprintf("%s/service", c.ApiUrl), nil)
 	if err != nil {
@@ -160,6 +161,8 @@ func (c *Client) GetContainerServices() ([]ContainersDomains, error) {
 	if err != nil || status != 200 {
 		return nil, err
 	}
+
+	tflog.Debug(ctx, fmt.Sprintf("status: %d, body: %s", status, string(body[:])))
 
 	container_services := ContainerServices{}
 	err = json.Unmarshal(body, &container_services)

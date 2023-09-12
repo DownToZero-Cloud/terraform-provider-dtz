@@ -29,14 +29,14 @@ resource "downtozero_container_service" "test1" {
   }]
 }
 
-resource "downtozero_container_service" "test2" {
-  domains = [{
-    name = "08605de8-8baf-49bf-a820-4977ba694edc.containers.dtz.dev"
-    routing = [{
-      prefix = "/",
-      service_definition = {
-        container_image = "docker.io/library/nginx"
-      }
-    }]
-  }]
-}
+# resource "downtozero_container_service" "test2" {
+#   domains = [{
+#     name = "08605de8-8baf-49bf-a820-4977ba694edc.containers.dtz.dev"
+#     routing = [{
+#       prefix = "/",
+#       service_definition = {
+#         container_image = "docker.io/library/nginx"
+#       }
+#     }]
+#   }]
+# }

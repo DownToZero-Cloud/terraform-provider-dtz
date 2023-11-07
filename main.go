@@ -40,7 +40,7 @@ func main() {
 
 	opts := providerserver.ServeOpts{
 		// TODO: Update this string with the published name of your provider.
-		Address: "hashicorp.com/edu/downtozero",
+		Address: "hashicorp.com/apimeister/downtozero",
 		Debug:   debug,
 	}
 

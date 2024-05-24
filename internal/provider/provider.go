@@ -56,8 +56,9 @@ func (p *dtzProvider) Configure(ctx context.Context, req provider.ConfigureReque
 
 func (p *dtzProvider) DataSources(_ context.Context) []func() datasource.DataSource {
 	return []func() datasource.DataSource{
-		NewContextDataSource,
-		NewRssFeedDataSource,
+		newContextDataSource,
+		newRss2emailFeedDataSource,
+		newRss2emailProfileDataSource,
 	}
 }
 

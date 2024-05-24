@@ -17,7 +17,7 @@ var (
 	_ datasource.DataSource = &contextDataSource{}
 )
 
-func NewContextDataSource() datasource.DataSource {
+func newContextDataSource() datasource.DataSource {
 	return &contextDataSource{}
 }
 

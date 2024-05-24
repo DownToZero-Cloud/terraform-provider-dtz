@@ -14,14 +14,14 @@ import (
 )
 
 var (
-	_ datasource.DataSource = &rssFeedDataSource{}
+	_ datasource.DataSource = &rss2emailFeedDataSource{}
 )
 
-func NewRssFeedDataSource() datasource.DataSource {
-	return &rssFeedDataSource{}
+func newRss2emailFeedDataSource() datasource.DataSource {
+	return &rss2emailFeedDataSource{}
 }
 
-type rssFeedDataSource struct {
+type rss2emailFeedDataSource struct {
 	Id            types.String `tfsdk:"id"`
 	Url           types.String `tfsdk:"url"`
 	lastCheck     types.String `tfsdk:"lastCheck"`
@@ -31,13 +31,13 @@ type rssFeedDataSource struct {
 	api_key       string
 }
 
-type rssFeedConfig struct {
+type rss2emailFeedConfig struct {
 	Id   types.String `tfsdk:"id"`
 	Url  types.String `tfsdk:"url"`
 	Name types.String `tfsdk:"name"`
 }
 
-type rssFeedResponse struct {
+type rss2emailFeedResponse struct {
 	Id            string `json:"id"`
 	Url           string `json:"url"`
 	LastCheck     string `json:"lastCheck"`
@@ -46,11 +46,11 @@ type rssFeedResponse struct {
 	Name          string `json:"name"`
 }
 
-func (d *rssFeedDataSource) Metadata(_ context.Context, req datasource.MetadataRequest, resp *datasource.MetadataResponse) {
-	resp.TypeName = req.ProviderTypeName + "_rss_feed"
+func (d *rss2emailFeedDataSource) Metadata(_ context.Context, req datasource.MetadataRequest, resp *datasource.MetadataResponse) {
+	resp.TypeName = req.ProviderTypeName + "_rss2email_feed"
 }
 
-func (d *rssFeedDataSource) Schema(_ context.Context, _ datasource.SchemaRequest, resp *datasource.SchemaResponse) {
+func (d *rss2emailFeedDataSource) Schema(_ context.Context, _ datasource.SchemaRequest, resp *datasource.SchemaResponse) {
 	resp.Schema = schema.Schema{
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
@@ -72,7 +72,7 @@ func (d *rssFeedDataSource) Schema(_ context.Context, _ datasource.SchemaRequest
 	}
 }
 
-func (d *rssFeedDataSource) Configure(ctx context.Context, req datasource.ConfigureRequest, resp *datasource.ConfigureResponse) {
+func (d *rss2emailFeedDataSource) Configure(ctx context.Context, req datasource.ConfigureRequest, resp *datasource.ConfigureResponse) {
 	if req.ProviderData == nil {
 		tflog.Error(ctx, "configure: provider data is nil")
 		return
@@ -81,9 +81,9 @@ func (d *rssFeedDataSource) Configure(ctx context.Context, req datasource.Config
 	d.api_key = dtz.ApiKey
 }
 
-func (d *rssFeedDataSource) Read(ctx context.Context, req datasource.ReadRequest, resp *datasource.ReadResponse) {
-	var state rssFeedDataSource
-	var config_data rssFeedConfig
+func (d *rss2emailFeedDataSource) Read(ctx context.Context, req datasource.ReadRequest, resp *datasource.ReadResponse) {
+	var state rss2emailFeedDataSource
+	var config_data rss2emailFeedConfig
 	tflog.Info(ctx, fmt.Sprintf("read config %+v", req))
 	resp.Diagnostics.Append(req.Config.Get(ctx, &config_data)...)
 
@@ -115,7 +115,7 @@ func (d *rssFeedDataSource) Read(ctx context.Context, req datasource.ReadRequest
 	}
 	tflog.Info(ctx, fmt.Sprintf("rssFeedDataSource Read status: %d, body: %s", response.StatusCode, string(body[:])))
 
-	var resp_type rssFeedResponse
+	var resp_type rss2emailFeedResponse
 	err = json.Unmarshal(body, &resp_type)
 	if err != nil {
 		tflog.Error(ctx, "error unmarshalling")

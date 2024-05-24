@@ -24,17 +24,11 @@ func newRss2emailFeedDataSource() datasource.DataSource {
 type rss2emailFeedDataSource struct {
 	Id            types.String `tfsdk:"id"`
 	Url           types.String `tfsdk:"url"`
-	lastCheck     types.String `tfsdk:"lastCheck"`
-	lastDataFound types.String `tfsdk:"lastDataFound"`
-	enabled       types.Bool   `tfsdk:"enabled"`
 	Name          types.String `tfsdk:"name"`
+	LastCheck     types.String `tfsdk:"last_check"`
+	LastDataFound types.String `tfsdk:"last_data_found"`
+	Enabled       types.Bool   `tfsdk:"enabled"`
 	api_key       string
-}
-
-type rss2emailFeedConfig struct {
-	Id   types.String `tfsdk:"id"`
-	Url  types.String `tfsdk:"url"`
-	Name types.String `tfsdk:"name"`
 }
 
 type rss2emailFeedResponse struct {
@@ -54,19 +48,22 @@ func (d *rss2emailFeedDataSource) Schema(_ context.Context, _ datasource.SchemaR
 	resp.Schema = schema.Schema{
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
-				Computed:  false,
-				Required:  true,
-				Sensitive: false,
+				Required: true,
 			},
 			"url": schema.StringAttribute{
-				Computed:  false,
-				Optional:  true,
-				Sensitive: false,
+				Optional: true,
 			},
 			"name": schema.StringAttribute{
-				Computed:  true,
-				Optional:  true,
-				Sensitive: false,
+				Computed: true,
+			},
+			"last_check": schema.StringAttribute{
+				Computed: true,
+			},
+			"last_data_found": schema.StringAttribute{
+				Computed: true,
+			},
+			"enabled": schema.BoolAttribute{
+				Computed: true,
 			},
 		},
 	}
@@ -83,8 +80,8 @@ func (d *rss2emailFeedDataSource) Configure(ctx context.Context, req datasource.
 
 func (d *rss2emailFeedDataSource) Read(ctx context.Context, req datasource.ReadRequest, resp *datasource.ReadResponse) {
 	var state rss2emailFeedDataSource
-	var config_data rss2emailFeedConfig
-	tflog.Info(ctx, fmt.Sprintf("read config %+v", req))
+	var config_data rss2emailFeedDataSource
+	// tflog.Info(ctx, fmt.Sprintf("read config %+v", req))
 	resp.Diagnostics.Append(req.Config.Get(ctx, &config_data)...)
 
 	if resp.Diagnostics.HasError() {
@@ -126,6 +123,9 @@ func (d *rss2emailFeedDataSource) Read(ctx context.Context, req datasource.ReadR
 	state.Id = types.StringValue(resp_type.Id)
 	state.Url = types.StringValue(resp_type.Url)
 	state.Name = types.StringValue(resp_type.Name)
+	state.Enabled = types.BoolValue(resp_type.Enabled)
+	state.LastCheck = types.StringValue(resp_type.LastDataFound)
+	state.LastDataFound = types.StringValue(resp_type.LastDataFound)
 	// set state
 	diags := resp.State.Set(ctx, &state)
 	resp.Diagnostics.Append(diags...)

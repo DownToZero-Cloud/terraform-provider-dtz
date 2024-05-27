@@ -3,4 +3,12 @@
 
 ## build
 
-go build -o terraform-provider-dtz && go install .
+```
+go build -o terraform-provider-dtz && go install
+```
+
+## generate docs
+
+```
+~/go/bin/tfplugindocs
+```

@@ -1,0 +1,484 @@
+openapi: 3.1.0
+info:
+  title: DTZ Containers
+  version: 1.0.10
+  description: a generated client for the DTZ Containers API
+  license:
+    name: Apache 2.0
+    url: https://www.apache.org/licenses/LICENSE-2.0.html
+  contact:
+    name: Jens Walter
+    email: jens@apimeister.com
+servers:
+- url: https://containers.dtz.rocks/api/{version}
+  variables:
+    version:
+      default: "2021-02-21"
+      enum:
+        - "2021-02-21"
+paths:
+  /enable:
+    post:
+      summary: enable the containers service
+      operationId: enable
+      responses:
+        "200":
+          description: service enabled
+  /disable:
+    post:
+      summary: disable the containers service
+      operationId: disable
+      responses:
+        "200":
+          description: service disabled
+  /domain:
+    get:
+      summary: get all domains
+      operationId: getDomains
+      responses:
+        "200":
+          description: success
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Domain'
+    post:
+      summary: create a new domain
+      operationId: createDomain
+      requestBody: 
+        description: register a new domain within dtz
+        content: 
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateDomain'
+      responses:
+        "200":
+          description: success
+          content:
+            application/json: 
+              schema:
+                $ref: '#/components/schemas/Domain'
+        "409":
+          description: domain already registered
+  /domain/{domain_name}:
+    get:
+      summary: get single domain
+      operationId: getDomain
+      parameters:
+        - in: path
+          name: domain_name
+          schema:
+            type: string
+          required: true
+          description: name of the domain
+      responses:
+        "200":
+          description: success
+          content:
+            application/json: 
+              schema:
+                $ref: '#/components/schemas/Domain'
+    delete:
+      summary: delete single domain
+      operationId: deleteDomain
+      parameters:
+        - in: path
+          name: domain_name
+          schema:
+            type: string
+          required: true
+          description: name of the domain
+      responses:
+        "200":
+          description: success
+    patch:
+      summary: trigger domain verification
+      operationId: verifyDomain
+      parameters:
+        - in: path
+          name: domain_name
+          schema:
+            type: string
+          required: true
+          description: name of the domain
+      responses:
+        "200":
+          description: success
+        "500":
+          description: error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /service:
+    get:
+      summary: get current container services
+      operationId: getServices
+      responses:
+        "200":
+          description: status
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Service'
+    post:
+      summary: create a new service hosting
+      operationId: createService
+      requestBody: 
+        description: creation request
+        content: 
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateService'
+      responses:
+        "200":
+          description: success
+          content: 
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Service'
+  /service/{serviceId}:
+    get:
+      summary: get service
+      operationId: getService
+      parameters:
+        - in: path
+          name: serviceId
+          schema:
+            type: string
+            format: ServiceId
+          required: true
+          description: service id
+      responses:
+        "200":
+          description: success
+          content:
+            application/json: 
+              schema:
+                $ref: '#/components/schemas/Service'
+    post:
+      summary: update service
+      operationId: updateService
+      parameters:
+        - in: path
+          name: serviceId
+          schema:
+            type: string
+            format: ServiceId
+          required: true
+          description: service id
+      requestBody: 
+        description: update request
+        content: 
+          application/json:
+            schema:
+              type: object
+              properties:
+                prefix:
+                  type: string
+                containerImage:
+                  type: string
+                containerImageVersion:
+                  type: string
+                containerPullUser:
+                  type: string
+                containerPullPwd:
+                  type: string
+                envVariables:
+                  type: object
+              required:
+                - prefix
+                - containerImage
+      responses:
+        "200":
+          description: success
+          content:
+            application/json: 
+              schema:
+                $ref: '#/components/schemas/Service'
+    delete:
+      summary: delete service
+      operationId: deleteService
+      parameters:
+        - in: path
+          name: serviceId
+          schema:
+            type: string
+            format: ServiceId
+          required: true
+          description: service id
+      responses:
+        "200":
+          description: success
+  /job:
+    get:
+      summary: list all jobs
+      operationId: getJobs
+      responses:
+        "200":
+          description: success
+          content:
+            application/json: 
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    jobId:
+                      type: string
+                      format: JobId
+                    jobName:
+                      type: string
+                    jobImage:
+                      type: string
+                    jobPullUser:
+                      type: string
+                    jobPullPassword:
+                      type: string
+                    scheduleType:
+                      type: string
+                    scheduleRepeat:
+                      type: string
+                    scheduleCron:
+                      type: string
+                    scheduleCostOptimzation:
+                      type: string
+                  required:
+                    - jobId
+                    - jobName
+                    - jobImage
+                    - scheduleType
+    post:
+      summary: create new job
+      operationId: createJob
+      requestBody: 
+        description: update existing hosting
+        content: 
+          application/json:
+            schema:
+              type: object
+              properties:
+                name:
+                  type: string
+                image:
+                  type: string
+                pullUser:
+                  type: string
+                pullPwd:
+                  type: string
+                scheduleType:
+                  type: string
+                scheduleCron:
+                  type: string
+                scheduleCostOptimzation:
+                  type: string
+                scheduleRepeat:
+                  type: string
+      responses:
+        "200":
+          description: success
+  /job/{job_id}:
+    get:
+      summary: get single job
+      operationId: getJob
+      parameters:
+        - in: path
+          name: job_id
+          schema:
+            type: string
+            format: JobId
+          required: true
+          description: uuid of the job
+      responses:
+        "200":
+          description: success
+          content:
+            application/json: 
+              schema:
+                $ref: '#/components/schemas/JobResponse'
+    post:
+      summary: update single job
+      operationId: updateJob
+      parameters:
+        - in: path
+          name: job_id
+          schema:
+            type: string
+            format: JobId
+          required: true
+          description: uuid of the job
+      responses:
+        "200":
+          description: success
+          content:
+            application/json: 
+              schema:
+                $ref: '#/components/schemas/JobResponse'
+    patch:
+      summary: trigger single job
+      operationId: triggerJob
+      parameters:
+        - in: path
+          name: job_id
+          schema:
+            type: string
+            format: JobId
+          required: true
+          description: uuid of the job
+      responses:
+        "200":
+          description: success
+    delete:
+      summary: delete single job
+      operationId: deleteJob
+      parameters:
+        - in: path
+          name: job_id
+          schema:
+            type: string
+            format: JobId
+          required: true
+          description: uuid of the job
+      responses:
+        "200":
+          description: success
+components:
+  schemas:
+    ErrorResponse:
+      type: object
+      properties:
+        msg:
+          type: string
+    JobResponse:
+      type: object
+      properties:
+        jobId:
+          type: string
+          format: JobId
+        jobName:
+          type: string
+        jobImage:
+          type: string
+        jobPullUser:
+          type: string
+        jobPullPassword:
+          type: string
+        scheduleType:
+          type: string
+        scheduleRepeat:
+          type: string
+        scheduleCron:
+          type: string
+        scheduleCostOptimzation:
+          type: string
+      required:
+        - jobId
+        - jobName
+        - jobImage
+        - scheduleType
+    Domain:
+      type: object
+      properties:
+        contextId:
+          type: string
+          format: ContextId
+        name:
+          type: string
+        verified:
+          type: boolean
+        created:
+          type: string
+          format: date-time
+      required:
+        - contextId
+        - name
+        - verified
+        - created
+    CreateDomain:
+      type: object
+      properties:
+        name:
+          type: string
+      required:
+        - name
+    Service:
+      type: object
+      properties:
+        contextId:
+          type: string
+          format: ContextId
+        serviceId:
+          type: string
+          format: ServiceId
+        created:
+          type: string
+          format: date-time
+        prefix:
+          type: string
+        containerImage:
+          type: string
+        containerImageVersion:
+          type: string
+        containerPullUser:
+          type: string
+        containerPullPwd:
+          type: string
+        envVariables:
+          type: object
+        login:
+          type: object
+          properties:
+            providerName:
+              type: string
+          required:
+          - providerName
+      required:
+        - contextId
+        - serviceId
+        - created
+        - prefix
+        - containerImage
+    CreateService:
+      type: object
+      properties:
+        prefix:
+          type: string
+        containerImage:
+          type: string
+        containerImageVersion:
+          type: string
+        containerPullUser:
+          type: string
+        containerPullPwd:
+          type: string
+        envVariables:
+          type: object
+        login:
+          type: object
+          properties:
+            providerName:
+              type: string
+          required:
+          - providerName
+      required:
+        - prefix
+        - containerImage
+  securitySchemes:
+    dtz_auth:
+      type: apiKey
+      in: header
+      name: X-API-KEY
+    dtz_auth2:
+      type: oauth2
+      flows:
+        implicit:
+          authorizationUrl: https://identity.dtz.rocks/api/2021-02-21/token/auth
+          scopes:
+            dummy:dummy: dummy
+security:
+  - dtz_auth: []
+  - dtz_auth2: []

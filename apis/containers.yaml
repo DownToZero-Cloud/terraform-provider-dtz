@@ -1,7 +1,7 @@
 openapi: 3.1.0
 info:
   title: DTZ Containers
-  version: 1.0.10
+  version: 1.0.11
   description: a generated client for the DTZ Containers API
   license:
     name: Apache 2.0
@@ -228,16 +228,16 @@ paths:
                 items:
                   type: object
                   properties:
-                    jobId:
+                    id:
                       type: string
                       format: JobId
-                    jobName:
+                    name:
                       type: string
-                    jobImage:
+                    containerImage:
                       type: string
-                    jobPullUser:
+                    containerPullUser:
                       type: string
-                    jobPullPassword:
+                    containerPullPwd:
                       type: string
                     scheduleType:
                       type: string
@@ -245,12 +245,14 @@ paths:
                       type: string
                     scheduleCron:
                       type: string
+                      examples: 
+                        - "4 2 * * *"
                     scheduleCostOptimzation:
                       type: string
                   required:
-                    - jobId
-                    - jobName
-                    - jobImage
+                    - id
+                    - name
+                    - containerImage
                     - scheduleType
     post:
       summary: create new job
@@ -264,11 +266,11 @@ paths:
               properties:
                 name:
                   type: string
-                image:
+                containerImage:
                   type: string
-                pullUser:
+                containerPullUser:
                   type: string
-                pullPwd:
+                containerPullPwd:
                   type: string
                 scheduleType:
                   type: string
@@ -356,16 +358,16 @@ components:
     JobResponse:
       type: object
       properties:
-        jobId:
+        id:
           type: string
           format: JobId
-        jobName:
+        name:
           type: string
-        jobImage:
+        containerImage:
           type: string
-        jobPullUser:
+        containerPullUser:
           type: string
-        jobPullPassword:
+        containerPullPwd:
           type: string
         scheduleType:
           type: string
@@ -376,9 +378,9 @@ components:
         scheduleCostOptimzation:
           type: string
       required:
-        - jobId
-        - jobName
-        - jobImage
+        - id
+        - name
+        - containerImage
         - scheduleType
     Domain:
       type: object

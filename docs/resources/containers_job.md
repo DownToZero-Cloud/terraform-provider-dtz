@@ -15,10 +15,10 @@ The `dtz_containers_job` resource allows you to create, update, and delete conta
 ```
 terraform
 resource "dtz_containers_job" "example" {
-job_name = "my-container-job"
-job_image = "nginx:latest"
+name = "my-container-job"
+container_image = "nginx:latest"
 schedule_type = "cron"
-schedule_cron = "0 "
+schedule_cron = "0 2 * * *"
 }
 ```
 
@@ -27,21 +27,21 @@ schedule_cron = "0 "
 
 ### Required
 
-- `job_name` (String) The name of the container job.
-- `job_image` (String) The Docker image to use for the job.
+- `name` (String) The name of the container job.
+- `container_image` (String) The Docker image to use for the job.
 - `schedule_type` (String) The type of schedule for the job.
 
 ### Optional
 
-- `job_pull_user` (String) The username for private image registry authentication.
-- `job_pull_password` (String, Sensitive) The password for private image registry authentication.
+- `container_pull_user` (String) The username for private image registry authentication.
+- `container_pull_password` (String, Sensitive) The password for private image registry authentication.
 - `schedule_repeat` (String) The repeat interval for the job (used when `schedule_type` is not "cron").
 - `schedule_cron` (String) The cron expression for job scheduling (used when `schedule_type` is "cron").
 - `schedule_cost_optimization` (String) Cost optimization settings for the job.
 
 ### Read-Only
 
-- `job_id` (String) The ID of this resource.
+- `id` (String) The ID of this resource.
 
 ## Import
 

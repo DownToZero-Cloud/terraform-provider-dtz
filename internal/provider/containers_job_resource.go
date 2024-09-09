@@ -22,11 +22,11 @@ func newContainersJobResource() resource.Resource {
 }
 
 type containersJobResource struct {
-	JobId                   types.String `tfsdk:"job_id"`
-	JobName                 types.String `tfsdk:"job_name"`
-	JobImage                types.String `tfsdk:"job_image"`
-	JobPullUser             types.String `tfsdk:"job_pull_user"`
-	JobPullPassword         types.String `tfsdk:"job_pull_password"`
+	Id                      types.String `tfsdk:"id"`
+	Name                    types.String `tfsdk:"name"`
+	ContainerImage          types.String `tfsdk:"container_image"`
+	ContainerPullUser       types.String `tfsdk:"container_pull_user"`
+	ContainerPullPassword   types.String `tfsdk:"container_pull_password"`
 	ScheduleType            types.String `tfsdk:"schedule_type"`
 	ScheduleRepeat          types.String `tfsdk:"schedule_repeat"`
 	ScheduleCron            types.String `tfsdk:"schedule_cron"`
@@ -36,9 +36,9 @@ type containersJobResource struct {
 
 type createJobRequest struct {
 	Name                    string `json:"name"`
-	Image                   string `json:"image"`
-	PullUser                string `json:"pullUser,omitempty"`
-	PullPwd                 string `json:"pullPwd,omitempty"`
+	ContainerImage          string `json:"containerImage"`
+	ContainerPullUser       string `json:"containerPullUser,omitempty"`
+	ContainerPullPwd        string `json:"containerPullPwd,omitempty"`
 	ScheduleType            string `json:"scheduleType"`
 	ScheduleCron            string `json:"scheduleCron,omitempty"`
 	ScheduleCostOptimzation string `json:"scheduleCostOptimzation,omitempty"`
@@ -52,19 +52,19 @@ func (d *containersJobResource) Metadata(_ context.Context, req resource.Metadat
 func (d *containersJobResource) Schema(_ context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {
 	resp.Schema = schema.Schema{
 		Attributes: map[string]schema.Attribute{
-			"job_id": schema.StringAttribute{
+			"id": schema.StringAttribute{
 				Computed: true,
 			},
-			"job_name": schema.StringAttribute{
+			"name": schema.StringAttribute{
 				Required: true,
 			},
-			"job_image": schema.StringAttribute{
+			"container_image": schema.StringAttribute{
 				Required: true,
 			},
-			"job_pull_user": schema.StringAttribute{
+			"container_pull_user": schema.StringAttribute{
 				Optional: true,
 			},
-			"job_pull_password": schema.StringAttribute{
+			"container_pull_password": schema.StringAttribute{
 				Optional:  true,
 				Sensitive: true,
 			},
@@ -93,10 +93,10 @@ func (d *containersJobResource) Create(ctx context.Context, req resource.CreateR
 	}
 
 	createJob := createJobRequest{
-		Name:                    plan.JobName.ValueString(),
-		Image:                   plan.JobImage.ValueString(),
-		PullUser:                plan.JobPullUser.ValueString(),
-		PullPwd:                 plan.JobPullPassword.ValueString(),
+		Name:                    plan.Name.ValueString(),
+		ContainerImage:          plan.ContainerImage.ValueString(),
+		ContainerPullUser:       plan.ContainerPullUser.ValueString(),
+		ContainerPullPwd:        plan.ContainerPullPassword.ValueString(),
 		ScheduleType:            plan.ScheduleType.ValueString(),
 		ScheduleCron:            plan.ScheduleCron.ValueString(),
 		ScheduleCostOptimzation: plan.ScheduleCostOptimzation.ValueString(),
@@ -139,7 +139,7 @@ func (d *containersJobResource) Create(ctx context.Context, req resource.CreateR
 		return
 	}
 
-	plan.JobId = jobResponse.JobId
+	plan.Id = jobResponse.Id
 	diags = resp.State.Set(ctx, plan)
 	resp.Diagnostics.Append(diags...)
 }
@@ -152,7 +152,7 @@ func (d *containersJobResource) Read(ctx context.Context, req resource.ReadReque
 		return
 	}
 
-	url := fmt.Sprintf("https://containers.dtz.rocks/api/2021-02-21/job/%s", state.JobId.ValueString())
+	url := fmt.Sprintf("https://containers.dtz.rocks/api/2021-02-21/job/%s", state.Id.ValueString())
 	request, err := http.NewRequest(http.MethodGet, url, nil)
 	if err != nil {
 		resp.Diagnostics.AddError("Client Error", fmt.Sprintf("Unable to create request, got error: %s", err))
@@ -195,10 +195,10 @@ func (d *containersJobResource) Update(ctx context.Context, req resource.UpdateR
 	}
 
 	updateJob := createJobRequest{
-		Name:                    plan.JobName.ValueString(),
-		Image:                   plan.JobImage.ValueString(),
-		PullUser:                plan.JobPullUser.ValueString(),
-		PullPwd:                 plan.JobPullPassword.ValueString(),
+		Name:                    plan.Name.ValueString(),
+		ContainerImage:          plan.ContainerImage.ValueString(),
+		ContainerPullUser:       plan.ContainerPullUser.ValueString(),
+		ContainerPullPwd:        plan.ContainerPullPassword.ValueString(),
 		ScheduleType:            plan.ScheduleType.ValueString(),
 		ScheduleCron:            plan.ScheduleCron.ValueString(),
 		ScheduleCostOptimzation: plan.ScheduleCostOptimzation.ValueString(),
@@ -211,7 +211,7 @@ func (d *containersJobResource) Update(ctx context.Context, req resource.UpdateR
 		return
 	}
 
-	url := fmt.Sprintf("https://containers.dtz.rocks/api/2021-02-21/job/%s", plan.JobId.ValueString())
+	url := fmt.Sprintf("https://containers.dtz.rocks/api/2021-02-21/job/%s", plan.Id.ValueString())
 	httpReq, err := http.NewRequest(http.MethodPost, url, strings.NewReader(string(body)))
 	if err != nil {
 		resp.Diagnostics.AddError("Client Error", fmt.Sprintf("Unable to create request, got error: %s", err))
@@ -253,7 +253,7 @@ func (d *containersJobResource) Delete(ctx context.Context, req resource.DeleteR
 		return
 	}
 
-	url := fmt.Sprintf("https://containers.dtz.rocks/api/2021-02-21/job/%s", state.JobId.ValueString())
+	url := fmt.Sprintf("https://containers.dtz.rocks/api/2021-02-21/job/%s", state.Id.ValueString())
 	request, err := http.NewRequest(http.MethodDelete, url, nil)
 	if err != nil {
 		resp.Diagnostics.AddError("Client Error", fmt.Sprintf("Unable to create request, got error: %s", err))

@@ -12,13 +12,12 @@ The `dtz_containers_job` resource allows you to create, update, and delete conta
 
 ## Example Usage
 
-```
-terraform
+```terraform
 resource "dtz_containers_job" "example" {
-name = "my-container-job"
-container_image = "nginx:latest"
-schedule_type = "cron"
-schedule_cron = "0 2 * * *"
+  name = "my-container-job"
+  container_image = "docker.io/library/hello-world:latest"
+  schedule_type = "cron"
+  schedule_cron = "0 2 * * *"
 }
 ```
 

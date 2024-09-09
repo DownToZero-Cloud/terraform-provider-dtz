@@ -27,7 +27,7 @@ type containersJobResource struct {
 	Name                    types.String `tfsdk:"name"`
 	ContainerImage          types.String `tfsdk:"container_image"`
 	ContainerPullUser       types.String `tfsdk:"container_pull_user"`
-	ContainerPullPwd        types.String `tfsdk:"container_pull_pwd""`
+	ContainerPullPwd        types.String `tfsdk:"container_pull_pwd"`
 	ScheduleType            types.String `tfsdk:"schedule_type"`
 	ScheduleRepeat          types.String `tfsdk:"schedule_repeat"`
 	ScheduleCron            types.String `tfsdk:"schedule_cron"`
@@ -36,16 +36,15 @@ type containersJobResource struct {
 }
 
 type containersJobResponse struct {
-	Id                      string `json:"id"`
-	Name                    string `json:"name"`
-	ContainerImage          string `json:"containerImage"`
-	ContainerPullUser       string `json:"containerPullUser"`
-	ContainerPullPwd        string `json:"containerPullPwd"`
-	ScheduleType            string `json:"scheduleType"`
-	ScheduleRepeat          string `json:"scheduleRepeat"`
-	ScheduleCron            string `json:"scheduleCron"`
-	ScheduleCostOptimzation string `json:"scheduleCostOptimzation"`
-	api_key                 string
+	Id                      string  `json:"id"`
+	Name                    string  `json:"name"`
+	ContainerImage          string  `json:"containerImage"`
+	ContainerPullUser       *string `json:"containerPullUser"`
+	ContainerPullPwd        *string `json:"containerPullPwd"`
+	ScheduleType            string  `json:"scheduleType"`
+	ScheduleRepeat          *string `json:"scheduleRepeat"`
+	ScheduleCron            *string `json:"scheduleCron"`
+	ScheduleCostOptimzation *string `json:"scheduleCostOptimzation"`
 }
 
 type createJobRequest struct {
@@ -163,12 +162,12 @@ func (d *containersJobResource) Create(ctx context.Context, req resource.CreateR
 	plan.Id = types.StringValue(jobResponse.Id)
 	plan.Name = types.StringValue(jobResponse.Name)
 	plan.ContainerImage = types.StringValue(jobResponse.ContainerImage)
-	plan.ContainerPullUser = types.StringValue(jobResponse.ContainerPullUser)
-	plan.ContainerPullPwd = types.StringValue(jobResponse.ContainerPullPwd)
+	plan.ContainerPullUser = types.StringPointerValue(jobResponse.ContainerPullUser)
+	plan.ContainerPullPwd = types.StringPointerValue(jobResponse.ContainerPullPwd)
 	plan.ScheduleType = types.StringValue(jobResponse.ScheduleType)
-	plan.ScheduleRepeat = types.StringValue(jobResponse.ScheduleRepeat)
-	plan.ScheduleCron = types.StringValue(jobResponse.ScheduleCron)
-	plan.ScheduleCostOptimzation = types.StringValue(jobResponse.ScheduleCostOptimzation)
+	plan.ScheduleRepeat = types.StringPointerValue(jobResponse.ScheduleRepeat)
+	plan.ScheduleCron = types.StringPointerValue(jobResponse.ScheduleCron)
+	plan.ScheduleCostOptimzation = types.StringPointerValue(jobResponse.ScheduleCostOptimzation)
 
 	diags = resp.State.Set(ctx, plan)
 	resp.Diagnostics.Append(diags...)
@@ -300,12 +299,12 @@ func (d *containersJobResource) Update(ctx context.Context, req resource.UpdateR
 	plan.Id = types.StringValue(jobResponse.Id)
 	plan.Name = types.StringValue(jobResponse.Name)
 	plan.ContainerImage = types.StringValue(jobResponse.ContainerImage)
-	plan.ContainerPullUser = types.StringValue(jobResponse.ContainerPullUser)
-	plan.ContainerPullPwd = types.StringValue(jobResponse.ContainerPullPwd)
+	plan.ContainerPullUser = types.StringPointerValue(jobResponse.ContainerPullUser)
+	plan.ContainerPullPwd = types.StringPointerValue(jobResponse.ContainerPullPwd)
 	plan.ScheduleType = types.StringValue(jobResponse.ScheduleType)
-	plan.ScheduleRepeat = types.StringValue(jobResponse.ScheduleRepeat)
-	plan.ScheduleCron = types.StringValue(jobResponse.ScheduleCron)
-	plan.ScheduleCostOptimzation = types.StringValue(jobResponse.ScheduleCostOptimzation)
+	plan.ScheduleRepeat = types.StringPointerValue(jobResponse.ScheduleRepeat)
+	plan.ScheduleCron = types.StringPointerValue(jobResponse.ScheduleCron)
+	plan.ScheduleCostOptimzation = types.StringPointerValue(jobResponse.ScheduleCostOptimzation)
 
 	diags = resp.State.Set(ctx, plan)
 	resp.Diagnostics.Append(diags...)

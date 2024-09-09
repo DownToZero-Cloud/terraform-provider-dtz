@@ -11,6 +11,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/types"
+	"github.com/hashicorp/terraform-plugin-log/tflog"
 )
 
 var (
@@ -119,6 +120,13 @@ func (d *containersJobResource) Create(ctx context.Context, req resource.CreateR
 	httpReq.Header.Set("Content-Type", "application/json")
 	httpReq.Header.Set("X-API-KEY", d.api_key)
 
+	// Add debug log before sending the request
+	tflog.Debug(ctx, "Sending create job request", map[string]interface{}{
+		"url":    url,
+		"method": http.MethodPost,
+		"body":   string(body),
+	})
+
 	client := &http.Client{}
 	res, err := client.Do(httpReq)
 	if err != nil {
@@ -159,6 +167,12 @@ func (d *containersJobResource) Read(ctx context.Context, req resource.ReadReque
 		return
 	}
 	request.Header.Set("X-API-KEY", d.api_key)
+
+	// Add debug log before sending the request
+	tflog.Debug(ctx, "Sending read job request", map[string]interface{}{
+		"url":    url,
+		"method": http.MethodGet,
+	})
 
 	client := &http.Client{}
 	response, err := client.Do(request)
@@ -220,6 +234,13 @@ func (d *containersJobResource) Update(ctx context.Context, req resource.UpdateR
 
 	httpReq.Header.Set("Content-Type", "application/json")
 	httpReq.Header.Set("X-API-KEY", d.api_key)
+
+	// Add debug log before sending the request
+	tflog.Debug(ctx, "Sending update job request", map[string]interface{}{
+		"url":    url,
+		"method": http.MethodPost,
+		"body":   string(body),
+	})
 
 	client := &http.Client{}
 	res, err := client.Do(httpReq)

@@ -23,15 +23,15 @@ func newContainersJobResource() resource.Resource {
 }
 
 type containersJobResource struct {
-	Id                      types.String `tfsdk:"id"`
-	Name                    types.String `tfsdk:"name"`
-	ContainerImage          types.String `tfsdk:"container_image"`
-	ContainerPullUser       types.String `tfsdk:"container_pull_user"`
-	ContainerPullPwd        types.String `tfsdk:"container_pull_pwd"`
-	ScheduleType            types.String `tfsdk:"schedule_type"`
-	ScheduleRepeat          types.String `tfsdk:"schedule_repeat"`
-	ScheduleCron            types.String `tfsdk:"schedule_cron"`
-	ScheduleCostOptimzation types.String `tfsdk:"schedule_cost_optimization"`
+	Id                      types.String `tfsdk:"id" json:"id"`
+	Name                    types.String `tfsdk:"name" json:"name"`
+	ContainerImage          types.String `tfsdk:"container_image" json:"containerImage"`
+	ContainerPullUser       types.String `tfsdk:"container_pull_user" json:"containerPullUser"`
+	ContainerPullPwd        types.String `tfsdk:"container_pull_pwd" json:"containerPullPwd"`
+	ScheduleType            types.String `tfsdk:"schedule_type" json:"scheduleType"`
+	ScheduleRepeat          types.String `tfsdk:"schedule_repeat" json:"scheduleRepeat"`
+	ScheduleCron            types.String `tfsdk:"schedule_cron" json:"scheduleCron"`
+	ScheduleCostOptimzation types.String `tfsdk:"schedule_cost_optimization" json:"scheduleCostOptimzation"`
 	api_key                 string
 }
 

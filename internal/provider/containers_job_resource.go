@@ -27,7 +27,7 @@ type containersJobResource struct {
 	Name                    types.String `tfsdk:"name"`
 	ContainerImage          types.String `tfsdk:"container_image"`
 	ContainerPullUser       types.String `tfsdk:"container_pull_user"`
-	ContainerPullPassword   types.String `tfsdk:"container_pull_password"`
+	ContainerPullPwd        types.String `tfsdk:"container_pull_password"`
 	ScheduleType            types.String `tfsdk:"schedule_type"`
 	ScheduleRepeat          types.String `tfsdk:"schedule_repeat"`
 	ScheduleCron            types.String `tfsdk:"schedule_cron"`
@@ -65,7 +65,7 @@ func (d *containersJobResource) Schema(_ context.Context, _ resource.SchemaReque
 			"container_pull_user": schema.StringAttribute{
 				Optional: true,
 			},
-			"container_pull_password": schema.StringAttribute{
+			"container_pull_pwd": schema.StringAttribute{
 				Optional:  true,
 				Sensitive: true,
 			},
@@ -97,7 +97,7 @@ func (d *containersJobResource) Create(ctx context.Context, req resource.CreateR
 		Name:                    plan.Name.ValueString(),
 		ContainerImage:          plan.ContainerImage.ValueString(),
 		ContainerPullUser:       plan.ContainerPullUser.ValueString(),
-		ContainerPullPwd:        plan.ContainerPullPassword.ValueString(),
+		ContainerPullPwd:        plan.ContainerPullPwd.ValueString(),
 		ScheduleType:            plan.ScheduleType.ValueString(),
 		ScheduleCron:            plan.ScheduleCron.ValueString(),
 		ScheduleCostOptimzation: plan.ScheduleCostOptimzation.ValueString(),
@@ -212,7 +212,7 @@ func (d *containersJobResource) Update(ctx context.Context, req resource.UpdateR
 		Name:                    plan.Name.ValueString(),
 		ContainerImage:          plan.ContainerImage.ValueString(),
 		ContainerPullUser:       plan.ContainerPullUser.ValueString(),
-		ContainerPullPwd:        plan.ContainerPullPassword.ValueString(),
+		ContainerPullPwd:        plan.ContainerPullPwd.ValueString(),
 		ScheduleType:            plan.ScheduleType.ValueString(),
 		ScheduleCron:            plan.ScheduleCron.ValueString(),
 		ScheduleCostOptimzation: plan.ScheduleCostOptimzation.ValueString(),

@@ -16,7 +16,7 @@ The `dtz_containers_job` resource allows you to create, update, and delete conta
 resource "dtz_containers_job" "example" {
   name = "my-container-job"
   container_image = "docker.io/library/hello-world:latest"
-  schedule_type = "cron"
+  schedule_type = "precise"
   schedule_cron = "52 3 * * *" #daily at 03:52am
 }
 ```
@@ -33,9 +33,9 @@ resource "dtz_containers_job" "example" {
 ### Optional
 
 - `container_pull_user` (String) The username for private image registry authentication.
-- `container_pull_password` (String, Sensitive) The password for private image registry authentication.
+- `container_pull_pwd` (String, Sensitive) The password for private image registry authentication.
 - `schedule_repeat` (String) The repeat interval for the job (used when `schedule_type` is not "cron").
-- `schedule_cron` (String) The cron expression for job scheduling (used when `schedule_type` is "cron").
+- `schedule_cron` (String) The cron expression for job scheduling (used when `schedule_type` is "precise").
 - `schedule_cost_optimization` (String) Cost optimization settings for the job.
 
 ### Read-Only

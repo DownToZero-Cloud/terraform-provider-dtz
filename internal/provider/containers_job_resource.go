@@ -10,7 +10,6 @@ import (
 
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
-	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 )
 
@@ -23,15 +22,15 @@ func newContainersJobResource() resource.Resource {
 }
 
 type containersJobResource struct {
-	Id                      types.String `tfsdk:"id" json:"id"`
-	Name                    types.String `tfsdk:"name" json:"name"`
-	ContainerImage          types.String `tfsdk:"container_image" json:"containerImage"`
-	ContainerPullUser       types.String `tfsdk:"container_pull_user" json:"containerPullUser"`
-	ContainerPullPwd        types.String `tfsdk:"container_pull_pwd" json:"containerPullPwd"`
-	ScheduleType            types.String `tfsdk:"schedule_type" json:"scheduleType"`
-	ScheduleRepeat          types.String `tfsdk:"schedule_repeat" json:"scheduleRepeat"`
-	ScheduleCron            types.String `tfsdk:"schedule_cron" json:"scheduleCron"`
-	ScheduleCostOptimzation types.String `tfsdk:"schedule_cost_optimization" json:"scheduleCostOptimzation"`
+	Id                      string `tfsdk:"id" json:"id"`
+	Name                    string `tfsdk:"name" json:"name"`
+	ContainerImage          string `tfsdk:"container_image" json:"containerImage"`
+	ContainerPullUser       string `tfsdk:"container_pull_user" json:"containerPullUser"`
+	ContainerPullPwd        string `tfsdk:"container_pull_pwd" json:"containerPullPwd"`
+	ScheduleType            string `tfsdk:"schedule_type" json:"scheduleType"`
+	ScheduleRepeat          string `tfsdk:"schedule_repeat" json:"scheduleRepeat"`
+	ScheduleCron            string `tfsdk:"schedule_cron" json:"scheduleCron"`
+	ScheduleCostOptimzation string `tfsdk:"schedule_cost_optimization" json:"scheduleCostOptimzation"`
 	api_key                 string
 }
 
@@ -94,14 +93,14 @@ func (d *containersJobResource) Create(ctx context.Context, req resource.CreateR
 	}
 
 	createJob := createJobRequest{
-		Name:                    plan.Name.ValueString(),
-		ContainerImage:          plan.ContainerImage.ValueString(),
-		ContainerPullUser:       plan.ContainerPullUser.ValueString(),
-		ContainerPullPwd:        plan.ContainerPullPwd.ValueString(),
-		ScheduleType:            plan.ScheduleType.ValueString(),
-		ScheduleCron:            plan.ScheduleCron.ValueString(),
-		ScheduleCostOptimzation: plan.ScheduleCostOptimzation.ValueString(),
-		ScheduleRepeat:          plan.ScheduleRepeat.ValueString(),
+		Name:                    plan.Name,
+		ContainerImage:          plan.ContainerImage,
+		ContainerPullUser:       plan.ContainerPullUser,
+		ContainerPullPwd:        plan.ContainerPullPwd,
+		ScheduleType:            plan.ScheduleType,
+		ScheduleCron:            plan.ScheduleCron,
+		ScheduleCostOptimzation: plan.ScheduleCostOptimzation,
+		ScheduleRepeat:          plan.ScheduleRepeat,
 	}
 
 	body, err := json.Marshal(createJob)
@@ -167,7 +166,7 @@ func (d *containersJobResource) Read(ctx context.Context, req resource.ReadReque
 		return
 	}
 
-	url := fmt.Sprintf("https://containers.dtz.rocks/api/2021-02-21/job/%s", state.Id.ValueString())
+	url := fmt.Sprintf("https://containers.dtz.rocks/api/2021-02-21/job/%s", state.Id)
 	request, err := http.NewRequest(http.MethodGet, url, nil)
 	if err != nil {
 		resp.Diagnostics.AddError("Client Error", fmt.Sprintf("Unable to create request, got error: %s", err))
@@ -222,14 +221,14 @@ func (d *containersJobResource) Update(ctx context.Context, req resource.UpdateR
 	}
 
 	updateJob := createJobRequest{
-		Name:                    plan.Name.ValueString(),
-		ContainerImage:          plan.ContainerImage.ValueString(),
-		ContainerPullUser:       plan.ContainerPullUser.ValueString(),
-		ContainerPullPwd:        plan.ContainerPullPwd.ValueString(),
-		ScheduleType:            plan.ScheduleType.ValueString(),
-		ScheduleCron:            plan.ScheduleCron.ValueString(),
-		ScheduleCostOptimzation: plan.ScheduleCostOptimzation.ValueString(),
-		ScheduleRepeat:          plan.ScheduleRepeat.ValueString(),
+		Name:                    plan.Name,
+		ContainerImage:          plan.ContainerImage,
+		ContainerPullUser:       plan.ContainerPullUser,
+		ContainerPullPwd:        plan.ContainerPullPwd,
+		ScheduleType:            plan.ScheduleType,
+		ScheduleCron:            plan.ScheduleCron,
+		ScheduleCostOptimzation: plan.ScheduleCostOptimzation,
+		ScheduleRepeat:          plan.ScheduleRepeat,
 	}
 
 	body, err := json.Marshal(updateJob)
@@ -238,7 +237,7 @@ func (d *containersJobResource) Update(ctx context.Context, req resource.UpdateR
 		return
 	}
 
-	url := fmt.Sprintf("https://containers.dtz.rocks/api/2021-02-21/job/%s", plan.Id.ValueString())
+	url := fmt.Sprintf("https://containers.dtz.rocks/api/2021-02-21/job/%s", plan.Id)
 	httpReq, err := http.NewRequest(http.MethodPost, url, strings.NewReader(string(body)))
 	if err != nil {
 		resp.Diagnostics.AddError("Client Error", fmt.Sprintf("Unable to create request, got error: %s", err))
@@ -294,7 +293,7 @@ func (d *containersJobResource) Delete(ctx context.Context, req resource.DeleteR
 		return
 	}
 
-	url := fmt.Sprintf("https://containers.dtz.rocks/api/2021-02-21/job/%s", state.Id.ValueString())
+	url := fmt.Sprintf("https://containers.dtz.rocks/api/2021-02-21/job/%s", state.Id)
 	request, err := http.NewRequest(http.MethodDelete, url, nil)
 	if err != nil {
 		resp.Diagnostics.AddError("Client Error", fmt.Sprintf("Unable to create request, got error: %s", err))

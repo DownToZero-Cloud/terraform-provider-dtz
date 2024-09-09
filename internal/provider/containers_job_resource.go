@@ -150,6 +150,13 @@ func (d *containersJobResource) Create(ctx context.Context, req resource.CreateR
 	plan.Id = jobResponse.Id
 	diags = resp.State.Set(ctx, plan)
 	resp.Diagnostics.Append(diags...)
+
+	// Add debug log after receiving the response
+	responseBody, _ := io.ReadAll(res.Body)
+	tflog.Debug(ctx, "Received create job response", map[string]interface{}{
+		"statusCode": res.StatusCode,
+		"body":       string(responseBody),
+	})
 }
 
 func (d *containersJobResource) Read(ctx context.Context, req resource.ReadRequest, resp *resource.ReadResponse) {
@@ -198,6 +205,12 @@ func (d *containersJobResource) Read(ctx context.Context, req resource.ReadReque
 	state = jobResponse
 	diags = resp.State.Set(ctx, &state)
 	resp.Diagnostics.Append(diags...)
+
+	// Add debug log after receiving the response
+	tflog.Debug(ctx, "Received read job response", map[string]interface{}{
+		"statusCode": response.StatusCode,
+		"body":       string(body),
+	})
 }
 
 func (d *containersJobResource) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) {
@@ -264,6 +277,13 @@ func (d *containersJobResource) Update(ctx context.Context, req resource.UpdateR
 
 	diags = resp.State.Set(ctx, jobResponse)
 	resp.Diagnostics.Append(diags...)
+
+	// Add debug log after receiving the response
+	body, _ = io.ReadAll(res.Body)
+	tflog.Debug(ctx, "Received update job response", map[string]interface{}{
+		"statusCode": res.StatusCode,
+		"body":       string(body),
+	})
 }
 
 func (d *containersJobResource) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) {
@@ -294,6 +314,13 @@ func (d *containersJobResource) Delete(ctx context.Context, req resource.DeleteR
 		resp.Diagnostics.AddError("API Error", fmt.Sprintf("Unable to delete job, status code: %d", response.StatusCode))
 		return
 	}
+
+	// Add debug log after receiving the response
+	body, _ := io.ReadAll(response.Body)
+	tflog.Debug(ctx, "Received delete job response", map[string]interface{}{
+		"statusCode": response.StatusCode,
+		"body":       string(body),
+	})
 }
 
 func (d *containersJobResource) Configure(ctx context.Context, req resource.ConfigureRequest, resp *resource.ConfigureResponse) {

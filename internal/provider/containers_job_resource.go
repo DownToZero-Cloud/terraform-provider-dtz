@@ -27,7 +27,7 @@ type containersJobResource struct {
 	Name                    types.String `tfsdk:"name"`
 	ContainerImage          types.String `tfsdk:"container_image"`
 	ContainerPullUser       types.String `tfsdk:"container_pull_user"`
-	ContainerPullPwd        types.String `tfsdk:"container_pull_password"`
+	ContainerPullPwd        types.String `tfsdk:"container_pull_pwd"`
 	ScheduleType            types.String `tfsdk:"schedule_type"`
 	ScheduleRepeat          types.String `tfsdk:"schedule_repeat"`
 	ScheduleCron            types.String `tfsdk:"schedule_cron"`

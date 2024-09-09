@@ -23,15 +23,28 @@ func newContainersJobResource() resource.Resource {
 }
 
 type containersJobResource struct {
-	Id                      types.String `tfsdk:"id" json:"id"`
-	Name                    types.String `tfsdk:"name" json:"name"`
-	ContainerImage          types.String `tfsdk:"container_image" json:"containerImage"`
-	ContainerPullUser       types.String `tfsdk:"container_pull_user" json:"containerPullUser"`
-	ContainerPullPwd        types.String `tfsdk:"container_pull_pwd" json:"containerPullPwd"`
-	ScheduleType            types.String `tfsdk:"schedule_type" json:"scheduleType"`
-	ScheduleRepeat          types.String `tfsdk:"schedule_repeat" json:"scheduleRepeat"`
-	ScheduleCron            types.String `tfsdk:"schedule_cron" json:"scheduleCron"`
-	ScheduleCostOptimzation types.String `tfsdk:"schedule_cost_optimization" json:"scheduleCostOptimzation"`
+	Id                      types.String `tfsdk:"id"`
+	Name                    types.String `tfsdk:"name"`
+	ContainerImage          types.String `tfsdk:"container_image"`
+	ContainerPullUser       types.String `tfsdk:"container_pull_user"`
+	ContainerPullPwd        types.String `tfsdk:"container_pull_pwd""`
+	ScheduleType            types.String `tfsdk:"schedule_type"`
+	ScheduleRepeat          types.String `tfsdk:"schedule_repeat"`
+	ScheduleCron            types.String `tfsdk:"schedule_cron"`
+	ScheduleCostOptimzation types.String `tfsdk:"schedule_cost_optimization"`
+	api_key                 string
+}
+
+type containersJobResponse struct {
+	Id                      string `json:"id"`
+	Name                    string `json:"name"`
+	ContainerImage          string `json:"containerImage"`
+	ContainerPullUser       string `json:"containerPullUser"`
+	ContainerPullPwd        string `json:"containerPullPwd"`
+	ScheduleType            string `json:"scheduleType"`
+	ScheduleRepeat          string `json:"scheduleRepeat"`
+	ScheduleCron            string `json:"scheduleCron"`
+	ScheduleCostOptimzation string `json:"scheduleCostOptimzation"`
 	api_key                 string
 }
 
@@ -140,14 +153,23 @@ func (d *containersJobResource) Create(ctx context.Context, req resource.CreateR
 		return
 	}
 
-	var jobResponse containersJobResource
+	var jobResponse containersJobResponse
 	err = json.NewDecoder(res.Body).Decode(&jobResponse)
 	if err != nil {
 		resp.Diagnostics.AddError("Client Error", fmt.Sprintf("Unable to parse response, got error: %s", err))
 		return
 	}
 
-	plan.Id = jobResponse.Id
+	plan.Id = types.StringValue(jobResponse.Id)
+	plan.Name = types.StringValue(jobResponse.Name)
+	plan.ContainerImage = types.StringValue(jobResponse.ContainerImage)
+	plan.ContainerPullUser = types.StringValue(jobResponse.ContainerPullUser)
+	plan.ContainerPullPwd = types.StringValue(jobResponse.ContainerPullPwd)
+	plan.ScheduleType = types.StringValue(jobResponse.ScheduleType)
+	plan.ScheduleRepeat = types.StringValue(jobResponse.ScheduleRepeat)
+	plan.ScheduleCron = types.StringValue(jobResponse.ScheduleCron)
+	plan.ScheduleCostOptimzation = types.StringValue(jobResponse.ScheduleCostOptimzation)
+
 	diags = resp.State.Set(ctx, plan)
 	resp.Diagnostics.Append(diags...)
 
@@ -268,14 +290,24 @@ func (d *containersJobResource) Update(ctx context.Context, req resource.UpdateR
 		return
 	}
 
-	var jobResponse containersJobResource
+	var jobResponse containersJobResponse
 	err = json.NewDecoder(res.Body).Decode(&jobResponse)
 	if err != nil {
 		resp.Diagnostics.AddError("Client Error", fmt.Sprintf("Unable to parse response, got error: %s", err))
 		return
 	}
 
-	diags = resp.State.Set(ctx, jobResponse)
+	plan.Id = types.StringValue(jobResponse.Id)
+	plan.Name = types.StringValue(jobResponse.Name)
+	plan.ContainerImage = types.StringValue(jobResponse.ContainerImage)
+	plan.ContainerPullUser = types.StringValue(jobResponse.ContainerPullUser)
+	plan.ContainerPullPwd = types.StringValue(jobResponse.ContainerPullPwd)
+	plan.ScheduleType = types.StringValue(jobResponse.ScheduleType)
+	plan.ScheduleRepeat = types.StringValue(jobResponse.ScheduleRepeat)
+	plan.ScheduleCron = types.StringValue(jobResponse.ScheduleCron)
+	plan.ScheduleCostOptimzation = types.StringValue(jobResponse.ScheduleCostOptimzation)
+
+	diags = resp.State.Set(ctx, plan)
 	resp.Diagnostics.Append(diags...)
 
 	// Add debug log after receiving the response

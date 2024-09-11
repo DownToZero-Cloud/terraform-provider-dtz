@@ -1,7 +1,7 @@
 openapi: 3.1.0
 info:
   title: DTZ Containers
-  version: 1.0.11
+  version: 1.0.12
   description: a generated client for the DTZ Containers API
   license:
     name: Apache 2.0
@@ -283,6 +283,10 @@ paths:
       responses:
         "200":
           description: success
+          content:
+            application/json: 
+              schema:
+                $ref: '#/components/schemas/JobResponse'   
   /job/{job_id}:
     get:
       summary: get single job

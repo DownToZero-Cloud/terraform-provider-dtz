@@ -158,6 +158,7 @@ func (d *containersJobResource) Create(ctx context.Context, req resource.CreateR
 		resp.Diagnostics.AddError("Client Error", fmt.Sprintf("Unable to parse response, got error: %s", err))
 		return
 	}
+	tflog.Debug(ctx, "setting response data ", map[string]interface{}{"id": string(jobResponse.Id)})
 
 	plan.Id = types.StringValue(jobResponse.Id)
 	plan.Name = types.StringValue(jobResponse.Name)

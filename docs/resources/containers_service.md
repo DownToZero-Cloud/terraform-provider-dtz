@@ -32,7 +32,6 @@ resource "dtz_containers_service" "my-service" {
 
 - `prefix` (String) A unique identifier for the service.
 - `container_image` (String) The container image to use for the service.
-- `container_image_version` (String) The version of the container image to use.
 
 ### Optional
 

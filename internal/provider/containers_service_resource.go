@@ -25,40 +25,37 @@ func newContainersServiceResource() resource.Resource {
 }
 
 type containersServiceResource struct {
-	Id                    types.String `tfsdk:"id"`
-	Prefix                types.String `tfsdk:"prefix"`
-	ContainerImage        types.String `tfsdk:"container_image"`
-	ContainerImageVersion types.String `tfsdk:"container_image_version"`
-	ContainerPullUser     types.String `tfsdk:"container_pull_user"`
-	ContainerPullPwd      types.String `tfsdk:"container_pull_pwd"`
-	EnvVariables          types.Map    `tfsdk:"env_variables"`
-	Login                 types.Object `tfsdk:"login"`
-	api_key               string
+	Id                types.String `tfsdk:"id"`
+	Prefix            types.String `tfsdk:"prefix"`
+	ContainerImage    types.String `tfsdk:"container_image"`
+	ContainerPullUser types.String `tfsdk:"container_pull_user"`
+	ContainerPullPwd  types.String `tfsdk:"container_pull_pwd"`
+	EnvVariables      types.Map    `tfsdk:"env_variables"`
+	Login             types.Object `tfsdk:"login"`
+	api_key           string
 }
 
 type containersServiceResponse struct {
-	ContextId             string            `json:"contextId"`
-	ServiceId             string            `json:"serviceId"`
-	Created               string            `json:"created"`
-	Prefix                string            `json:"prefix"`
-	ContainerImage        string            `json:"containerImage"`
-	ContainerImageVersion string            `json:"containerImageVersion"`
-	ContainerPullUser     *string           `json:"containerPullUser"`
-	ContainerPullPwd      *string           `json:"containerPullPwd"`
-	EnvVariables          map[string]string `json:"envVariables"`
-	Login                 *struct {
+	ContextId         string            `json:"contextId"`
+	ServiceId         string            `json:"serviceId"`
+	Created           string            `json:"created"`
+	Prefix            string            `json:"prefix"`
+	ContainerImage    string            `json:"containerImage"`
+	ContainerPullUser *string           `json:"containerPullUser"`
+	ContainerPullPwd  *string           `json:"containerPullPwd"`
+	EnvVariables      map[string]string `json:"envVariables"`
+	Login             *struct {
 		ProviderName string `json:"providerName"`
 	} `json:"login"`
 }
 
 type createServiceRequest struct {
-	Prefix                string            `json:"prefix"`
-	ContainerImage        string            `json:"containerImage"`
-	ContainerImageVersion string            `json:"containerImageVersion"`
-	ContainerPullUser     string            `json:"containerPullUser,omitempty"`
-	ContainerPullPwd      string            `json:"containerPullPwd,omitempty"`
-	EnvVariables          map[string]string `json:"envVariables,omitempty"`
-	Login                 *struct {
+	Prefix            string            `json:"prefix"`
+	ContainerImage    string            `json:"containerImage"`
+	ContainerPullUser string            `json:"containerPullUser,omitempty"`
+	ContainerPullPwd  string            `json:"containerPullPwd,omitempty"`
+	EnvVariables      map[string]string `json:"envVariables,omitempty"`
+	Login             *struct {
 		ProviderName string `json:"providerName"`
 	} `json:"login,omitempty"`
 }
@@ -77,9 +74,6 @@ func (d *containersServiceResource) Schema(_ context.Context, _ resource.SchemaR
 				Required: true,
 			},
 			"container_image": schema.StringAttribute{
-				Required: true,
-			},
-			"container_image_version": schema.StringAttribute{
 				Required: true,
 			},
 			"container_pull_user": schema.StringAttribute{
@@ -114,11 +108,10 @@ func (d *containersServiceResource) Create(ctx context.Context, req resource.Cre
 	}
 
 	createService := createServiceRequest{
-		Prefix:                plan.Prefix.ValueString(),
-		ContainerImage:        plan.ContainerImage.ValueString(),
-		ContainerImageVersion: plan.ContainerImageVersion.ValueString(),
-		ContainerPullUser:     plan.ContainerPullUser.ValueString(),
-		ContainerPullPwd:      plan.ContainerPullPwd.ValueString(),
+		Prefix:            plan.Prefix.ValueString(),
+		ContainerImage:    plan.ContainerImage.ValueString(),
+		ContainerPullUser: plan.ContainerPullUser.ValueString(),
+		ContainerPullPwd:  plan.ContainerPullPwd.ValueString(),
 	}
 
 	if !plan.EnvVariables.IsNull() {
@@ -195,7 +188,6 @@ func (d *containersServiceResource) Create(ctx context.Context, req resource.Cre
 	plan.Id = types.StringValue(serviceResponse.ServiceId)
 	plan.Prefix = types.StringValue(serviceResponse.Prefix)
 	plan.ContainerImage = types.StringValue(serviceResponse.ContainerImage)
-	plan.ContainerImageVersion = types.StringValue(serviceResponse.ContainerImageVersion)
 	plan.ContainerPullUser = types.StringPointerValue(serviceResponse.ContainerPullUser)
 	plan.ContainerPullPwd = types.StringPointerValue(serviceResponse.ContainerPullPwd)
 
@@ -268,7 +260,6 @@ func (d *containersServiceResource) Read(ctx context.Context, req resource.ReadR
 	state.Id = types.StringValue(serviceResponse.ServiceId)
 	state.Prefix = types.StringValue(serviceResponse.Prefix)
 	state.ContainerImage = types.StringValue(serviceResponse.ContainerImage)
-	state.ContainerImageVersion = types.StringValue(serviceResponse.ContainerImageVersion)
 	state.ContainerPullUser = types.StringPointerValue(serviceResponse.ContainerPullUser)
 	state.ContainerPullPwd = types.StringPointerValue(serviceResponse.ContainerPullPwd)
 
@@ -305,11 +296,10 @@ func (d *containersServiceResource) Update(ctx context.Context, req resource.Upd
 	}
 
 	updateService := createServiceRequest{
-		Prefix:                plan.Prefix.ValueString(),
-		ContainerImage:        plan.ContainerImage.ValueString(),
-		ContainerImageVersion: plan.ContainerImageVersion.ValueString(),
-		ContainerPullUser:     plan.ContainerPullUser.ValueString(),
-		ContainerPullPwd:      plan.ContainerPullPwd.ValueString(),
+		Prefix:            plan.Prefix.ValueString(),
+		ContainerImage:    plan.ContainerImage.ValueString(),
+		ContainerPullUser: plan.ContainerPullUser.ValueString(),
+		ContainerPullPwd:  plan.ContainerPullPwd.ValueString(),
 	}
 
 	if !plan.EnvVariables.IsNull() {
@@ -383,7 +373,6 @@ func (d *containersServiceResource) Update(ctx context.Context, req resource.Upd
 	plan.Id = types.StringValue(serviceResponse.ServiceId)
 	plan.Prefix = types.StringValue(serviceResponse.Prefix)
 	plan.ContainerImage = types.StringValue(serviceResponse.ContainerImage)
-	plan.ContainerImageVersion = types.StringValue(serviceResponse.ContainerImageVersion)
 	plan.ContainerPullUser = types.StringPointerValue(serviceResponse.ContainerPullUser)
 	plan.ContainerPullPwd = types.StringPointerValue(serviceResponse.ContainerPullPwd)
 

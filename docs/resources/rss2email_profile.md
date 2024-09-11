@@ -12,12 +12,11 @@ The `dtz_rss2email_profile` resource allows you to create, update, and delete RS
 
 ## Example Usage
 
-```
-terraform
+```terraform
 resource "dtz_rss2email_profile" "example" {
-email = "user@example.com"
-subject = "New RSS Item: {title}"
-body = "A new item has been published:\n\nTitle: {title}\nLink: {link}\nDescription: {description}"
+  email = "user@example.com"
+  subject = "New RSS Item: {title}"
+  body = "A new item has been published:\n\nTitle: {title}\nLink: {link}\nDescription: {description}"
 }
 ```
 

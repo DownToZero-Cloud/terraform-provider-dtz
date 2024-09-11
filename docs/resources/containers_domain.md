@@ -14,7 +14,7 @@ The `dtz_containers_domain` resource allows you to create, read, and delete cont
 
 ```terraform
 resource "dtz_containers_domain" "example" {
-name = "example.com"
+  name = "example.com"
 }
 ```
 

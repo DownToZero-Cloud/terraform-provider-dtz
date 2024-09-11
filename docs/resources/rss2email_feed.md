@@ -12,11 +12,10 @@ The `dtz_rss2email_feed` resource allows you to create, update, and delete RSS2E
 
 ## Example Usage
 
-```
-terraform
+```terraform
 resource "dtz_rss2email_feed" "example" {
-url = "https://example.com/rss-feed"
-enabled = true
+  url = "https://example.com/rss-feed"
+  enabled = true
 }
 ```
 

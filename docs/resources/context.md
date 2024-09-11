@@ -12,10 +12,9 @@ The `dtz_context` resource allows you to create, update, and delete contexts in 
 
 ## Example Usage
 
-```
-terraform
+```terraform
 resource "dtz_context" "example" {
-alias = "production"
+  alias = "production"
 }
 ```
 

@@ -147,18 +147,24 @@ func (d *containersJobResource) Create(ctx context.Context, req resource.CreateR
 	}
 	defer res.Body.Close()
 
-	if res.StatusCode != http.StatusOK {
-		resp.Diagnostics.AddError("API Error", fmt.Sprintf("Unable to create job, status code: %d", res.StatusCode))
+	// if res.StatusCode != http.StatusOK {
+	// 	resp.Diagnostics.AddError("API Error", fmt.Sprintf("Unable to create job, status code: %d", res.StatusCode))
+	// 	return
+	// }
+
+	resp_body, err := io.ReadAll(res.Body)
+	if err != nil {
+		tflog.Error(ctx, "error reading")
 		return
 	}
+	tflog.Info(ctx, fmt.Sprintf("status: %d, body: %s", res.StatusCode, string(resp_body[:])))
 
 	var jobResponse containersJobResponse
-	err = json.NewDecoder(res.Body).Decode(&jobResponse)
+	err = json.Unmarshal(resp_body, &jobResponse)
 	if err != nil {
 		resp.Diagnostics.AddError("Client Error", fmt.Sprintf("Unable to parse response, got error: %s", err))
 		return
 	}
-	tflog.Debug(ctx, "setting response data ", map[string]interface{}{"id": string(jobResponse.Id)})
 
 	plan.Id = types.StringValue(jobResponse.Id)
 	plan.Name = types.StringValue(jobResponse.Name)
@@ -172,13 +178,6 @@ func (d *containersJobResource) Create(ctx context.Context, req resource.CreateR
 
 	diags = resp.State.Set(ctx, plan)
 	resp.Diagnostics.Append(diags...)
-
-	// Add debug log after receiving the response
-	responseBody, _ := io.ReadAll(res.Body)
-	tflog.Debug(ctx, "Received create job response", map[string]interface{}{
-		"statusCode": res.StatusCode,
-		"body":       string(responseBody),
-	})
 }
 
 func (d *containersJobResource) Read(ctx context.Context, req resource.ReadRequest, resp *resource.ReadResponse) {
@@ -217,22 +216,25 @@ func (d *containersJobResource) Read(ctx context.Context, req resource.ReadReque
 		return
 	}
 
-	var jobResponse containersJobResource
+	var jobResponse containersJobResponse
 	err = json.Unmarshal(body, &jobResponse)
 	if err != nil {
 		resp.Diagnostics.AddError("Client Error", fmt.Sprintf("Unable to parse response, got error: %s", err))
 		return
 	}
+	var result containersJobResource
+	result.Id = types.StringValue(jobResponse.Id)
+	result.Name = types.StringValue(jobResponse.Name)
+	result.ContainerImage = types.StringValue(jobResponse.ContainerImage)
+	result.ContainerPullUser = types.StringPointerValue(jobResponse.ContainerPullUser)
+	result.ContainerPullPwd = types.StringPointerValue(jobResponse.ContainerPullPwd)
+	result.ScheduleType = types.StringValue(jobResponse.ScheduleType)
+	result.ScheduleRepeat = types.StringPointerValue(jobResponse.ScheduleRepeat)
+	result.ScheduleCron = types.StringPointerValue(jobResponse.ScheduleCron)
+	result.ScheduleCostOptimzation = types.StringPointerValue(jobResponse.ScheduleCostOptimzation)
 
-	state = jobResponse
-	diags = resp.State.Set(ctx, &state)
+	diags = resp.State.Set(ctx, &result)
 	resp.Diagnostics.Append(diags...)
-
-	// Add debug log after receiving the response
-	tflog.Debug(ctx, "Received read job response", map[string]interface{}{
-		"statusCode": response.StatusCode,
-		"body":       string(body),
-	})
 }
 
 func (d *containersJobResource) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) {

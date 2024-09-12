@@ -434,3 +434,18 @@ func (d *containersServiceResource) Delete(ctx context.Context, req resource.Del
 		return
 	}
 }
+
+func (d *containersServiceResource) Configure(ctx context.Context, req resource.ConfigureRequest, resp *resource.ConfigureResponse) {
+	if req.ProviderData == nil {
+		return
+	}
+	dtz, ok := req.ProviderData.(dtzProvider)
+	if !ok {
+		resp.Diagnostics.AddError(
+			"Unexpected Resource Configure Type",
+			fmt.Sprintf("Expected dtzProvider, got: %T. Please report this issue to the provider developers.", req.ProviderData),
+		)
+		return
+	}
+	d.api_key = dtz.ApiKey
+}

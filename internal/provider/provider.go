@@ -22,8 +22,13 @@ func New(version string) func() provider.Provider {
 }
 
 type dtzProvider struct {
-	version string
-	ApiKey  string `tfsdk:"api_key"`
+	version                        string
+	ApiKey                         string `tfsdk:"api_key"`
+	EnableServiceContainers        bool   `tfsdk:"enable_service_containers"`
+	EnableServiceObjectstore       bool   `tfsdk:"enable_service_objectstore"`
+	EnableServiceContainerregistry bool   `tfsdk:"enable_service_containerregistry"`
+	EnableServiceRss2email         bool   `tfsdk:"enable_service_rss2email"`
+	EnableServiceObservability     bool   `tfsdk:"enable_service_observability"`
 }
 
 func (p *dtzProvider) Metadata(_ context.Context, _ provider.MetadataRequest, resp *provider.MetadataResponse) {
@@ -38,6 +43,26 @@ func (p *dtzProvider) Schema(_ context.Context, _ provider.SchemaRequest, resp *
 				Required:    true,
 				Sensitive:   true,
 				Description: "The API key for authentication",
+			},
+			"enable_service_containers": schema.BoolAttribute{
+				Optional:    true,
+				Description: "Enable the containers service",
+			},
+			"enable_service_objectstore": schema.BoolAttribute{
+				Optional:    true,
+				Description: "Enable the object store service",
+			},
+			"enable_service_containerregistry": schema.BoolAttribute{
+				Optional:    true,
+				Description: "Enable the container registry service",
+			},
+			"enable_service_rss2email": schema.BoolAttribute{
+				Optional:    true,
+				Description: "Enable the RSS2Email service",
+			},
+			"enable_service_observability": schema.BoolAttribute{
+				Optional:    true,
+				Description: "Enable the observability service",
 			},
 		},
 	}
@@ -65,6 +90,7 @@ func (p *dtzProvider) DataSources(_ context.Context) []func() datasource.DataSou
 func (p *dtzProvider) Resources(_ context.Context) []func() resource.Resource {
 	return []func() resource.Resource{
 		newRss2emailFeedResource,
+		newRss2emailProfileResource,
 		newContainersJobResource,
 		newContainersDomainResource,
 		newContainersServiceResource,

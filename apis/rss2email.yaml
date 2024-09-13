@@ -1,0 +1,265 @@
+openapi: 3.1.0
+info:
+  title: DTZ RSS2Email Api
+  version: 1.0.6
+  description: a generated client for the DTZ RSS2Email API
+  license:
+    name: Apache 2.0
+    url: https://www.apache.org/licenses/LICENSE-2.0.html
+  contact:
+    name: Jens Walter
+    email: jens@apimeister.com
+servers:
+- url: https://rss2email.dtz.rocks/api/{version}
+  variables:
+    version:
+      default: "2021-02-01"
+      enum:
+        - "2021-02-01"
+paths:
+  /enable:
+    post:
+      summary: enable the service
+      operationId: enableService
+      responses:
+        "200":
+          description: success
+  /rss2email/discover:
+    post:
+      summary: discover feed on homepage
+      operationId: discoverFeed
+      requestBody:
+        description: discover request
+        content: 
+          application/json:
+            schema:
+              type: object
+              properties:
+                url:
+                  type: string
+              required:
+              - url
+      responses:
+        "200":
+          description: discover response
+          content: 
+            application/json:
+              schema:
+                type: object
+                properties:
+                  feedUrl:
+                    type: string
+                  feedType:
+                    type: string
+  /rss2email/feed:
+    get:
+      summary: list all feeds
+      operationId: listFeed
+      responses:
+        "200":
+          description: feed data
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FeedList'
+    post:
+      summary: create feed subscription
+      operationId: createFeed
+      requestBody:
+        description: create feed request
+        content: 
+          application/json:
+            schema:
+              $ref: '#/components/schemas/FeedRequest'
+      responses:
+        "200":
+          description: success
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Feed'
+  /rss2email/feed/{feed_id}:
+    get:
+      summary: get feed
+      operationId: getFeed
+      parameters:
+        - in: path
+          name: feed_id
+          schema:
+            type: string
+            format: FeedId
+          required: true
+          description: feed id
+      responses:
+        "200":
+          description: success
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Feed'
+            application/hcl:
+              schema:
+                type: string
+    post:
+      summary: update feed
+      operationId: updateFeed
+      parameters:
+        - in: path
+          name: feed_id
+          schema:
+            type: string
+            format: FeedId
+          required: true
+          description: feed id
+      requestBody:
+        description: update feed request
+        content: 
+          application/json:
+            schema:
+              $ref: '#/components/schemas/FeedRequest'
+      responses:
+        "200":
+          description: feed update successful
+    delete:
+      summary: delete feed
+      operationId: deleteFeed
+      parameters:
+        - in: path
+          name: feed_id
+          schema:
+            type: string
+            format: FeedId
+          required: true
+          description: feed id
+      responses:
+        "200":
+          description: feed update successful
+  /rss2email/feed/{feed_id}/disable:
+    post:
+      summary: disable feed
+      operationId: disableFeed
+      parameters:
+        - in: path
+          name: feed_id
+          schema:
+            type: string
+            format: FeedId
+          required: true
+          description: feed id
+      responses:
+        "200":
+          description: feed update successful
+  /rss2email/feed/{feed_id}/enable:
+    post:
+      summary: enable feed
+      operationId: enableFeed
+      parameters:
+        - in: path
+          name: feed_id
+          schema:
+            type: string
+            format: FeedId
+          required: true
+          description: feed id
+      responses:
+        "200":
+          description: feed update successful
+  /rss2email/profile:
+    get:
+      summary: get profile
+      operationId: getProfile
+      responses:
+        "200":
+          description: profile response
+          content: 
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Profile'
+            application/hcl:
+              schema:
+                type: string
+    post:
+      summary: post a profile
+      operationId: postProfile
+      requestBody:
+        description: update profile request
+        content: 
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Profile'
+      responses:
+        "200":
+          description: success
+  /stats:
+    get:
+      summary: get service statistics
+      operationId: getStats
+      responses:
+        "200":
+          description: service statistics
+components:
+  schemas:
+    Profile:
+      type: object
+      properties:
+        email:
+          type: string
+        subject:
+          type: string
+        body:
+          type: string
+      required:
+      - email
+    FeedList:
+      type: array
+      items:
+        $ref: '#/components/schemas/Feed'
+    Feed:
+      type: object
+      properties:
+        id:
+          type: string
+          format: FeedId
+        url:
+          type: string
+        lastCheck:
+          type: string
+          format: date-time
+        lastDataFound:
+          type: string
+          format: date-time
+        enabled:
+          type: boolean
+        name:
+          type: string
+      required:
+      - id
+      - url
+      - lastCheck
+      - lastDataFound
+      - enabled
+      - name
+    FeedRequest:
+      type: object
+      properties:
+        url:
+          type: string
+        enabled:
+          type: boolean
+      required:
+      - url
+  securitySchemes:
+    dtz_auth:
+      type: apiKey
+      in: header
+      name: X-API-KEY
+    dtz_auth2:
+      type: oauth2
+      flows:
+        implicit:
+          authorizationUrl: https://identity.dtz.rocks/api/2021-02-21/token/auth
+          scopes:
+            dummy:dummy: dummy
+security:
+  - dtz_auth: []
+  - dtz_auth2: []

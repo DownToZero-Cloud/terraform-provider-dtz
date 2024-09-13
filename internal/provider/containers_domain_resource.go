@@ -120,13 +120,40 @@ func (d *containersDomainResource) Create(ctx context.Context, req resource.Crea
 		return
 	}
 
+	// After successfully creating the domain, call the validate function
+	validateUrl := fmt.Sprintf("https://containers.dtz.rocks/api/2021-02-21/domain/%s", plan.Name.ValueString())
+	validateReq, err := http.NewRequest(http.MethodPatch, validateUrl, nil)
+	if err != nil {
+		resp.Diagnostics.AddError("Client Error", fmt.Sprintf("Unable to create validation request, got error: %s", err))
+		return
+	}
+	validateReq.Header.Set("X-API-KEY", d.api_key)
+
+	tflog.Debug(ctx, "Sending domain validation request", map[string]interface{}{
+		"url":    validateUrl,
+		"method": http.MethodPatch,
+	})
+
+	validateRes, err := client.Do(validateReq)
+	if err != nil {
+		resp.Diagnostics.AddError("Client Error", fmt.Sprintf("Unable to validate domain, got error: %s", err))
+		return
+	}
+	defer validateRes.Body.Close()
+
+	if validateRes.StatusCode != http.StatusOK {
+		resp.Diagnostics.AddError("API Error", fmt.Sprintf("Unable to validate domain, status code: %d", validateRes.StatusCode))
+		return
+	}
+
 	plan.ContextId = types.StringValue(domainResponse.ContextId)
 	plan.Name = types.StringValue(domainResponse.Name)
-	plan.Verified = types.BoolValue(domainResponse.Verified)
+	plan.Verified = types.BoolValue(true)
 	plan.Created = types.StringValue(domainResponse.Created)
 
 	diags = resp.State.Set(ctx, plan)
 	resp.Diagnostics.Append(diags...)
+
 }
 
 func (d *containersDomainResource) Read(ctx context.Context, req resource.ReadRequest, resp *resource.ReadResponse) {

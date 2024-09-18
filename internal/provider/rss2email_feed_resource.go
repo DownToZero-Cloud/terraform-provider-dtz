@@ -40,56 +40,63 @@ type createFeedRequest struct {
 
 // Create implements resource.Resource.
 func (d *rss2emailFeedResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) {
-	tflog.Info(ctx, "rss2emailFeedResource create")
-	var url = "https://rss2email.dtz.rocks/api/2021-02-01/rss2email/feed"
-	var createFeed = &createFeedRequest{
-		Url:     "url",
-		Enabled: false,
-	}
-	rb, err := json.Marshal(createFeed)
-	if err != nil {
+	var plan rss2emailFeedResource
+	diags := req.Plan.Get(ctx, &plan)
+	resp.Diagnostics.Append(diags...)
+	if resp.Diagnostics.HasError() {
 		return
 	}
-	tflog.Info(ctx, "query API "+url)
-	request, err := http.NewRequest(http.MethodPost, url, strings.NewReader(string(rb)))
+
+	createReq := createFeedRequest{
+		Url:     plan.Url.ValueString(),
+		Enabled: plan.Enabled.ValueBool(),
+	}
+
+	body, err := json.Marshal(createReq)
 	if err != nil {
-		tflog.Error(ctx, "error retrieving")
+		resp.Diagnostics.AddError("Client Error", fmt.Sprintf("Unable to create feed, got error: %s", err))
 		return
 	}
-	request.Header.Set("X-API-KEY", d.api_key)
+
+	url := "https://rss2email.dtz.rocks/api/2021-02-01/rss2email/feed"
+	httpReq, err := http.NewRequest(http.MethodPost, url, strings.NewReader(string(body)))
+	if err != nil {
+		resp.Diagnostics.AddError("Client Error", fmt.Sprintf("Unable to create request, got error: %s", err))
+		return
+	}
+
+	httpReq.Header.Set("Content-Type", "application/json")
+	httpReq.Header.Set("X-API-KEY", d.api_key)
 
 	client := &http.Client{}
-	response, err := client.Do(request)
+	httpResp, err := client.Do(httpReq)
 	if err != nil {
-		tflog.Error(ctx, "error fetching")
+		resp.Diagnostics.AddError("Client Error", fmt.Sprintf("Unable to create feed, got error: %s", err))
 		return
 	}
-	defer response.Body.Close()
+	defer httpResp.Body.Close()
 
-	body, err := io.ReadAll(response.Body)
-	if err != nil {
-		tflog.Error(ctx, "error reading")
+	if httpResp.StatusCode != http.StatusOK {
+		resp.Diagnostics.AddError("Client Error", fmt.Sprintf("Unable to create feed, status code: %d", httpResp.StatusCode))
 		return
 	}
-	tflog.Info(ctx, fmt.Sprintf("rssFeedResource Read status: %d, body: %s", response.StatusCode, string(body[:])))
 
-	var resp_type rss2emailFeedResponse
-	err = json.Unmarshal(body, &resp_type)
+	var createResp rss2emailFeedResponse
+	err = json.NewDecoder(httpResp.Body).Decode(&createResp)
 	if err != nil {
-		tflog.Error(ctx, "error unmarshalling")
+		resp.Diagnostics.AddError("Client Error", fmt.Sprintf("Unable to parse create response, got error: %s", err))
 		return
 	}
-	tflog.Info(ctx, fmt.Sprintf("rssFeedResource Read response: %+v", resp_type))
 
-	var state rss2emailFeedResource
-	state.Id = types.StringValue(resp_type.Id)
-	state.Url = types.StringValue(resp_type.Url)
-	state.Name = types.StringValue(resp_type.Name)
-	state.Enabled = types.BoolValue(resp_type.Enabled)
-	state.LastCheck = types.StringValue(resp_type.LastDataFound)
-	state.LastDataFound = types.StringValue(resp_type.LastDataFound)
-	// set state
-	diags := resp.State.Set(ctx, &state)
+	// Set the resource state
+	plan.Id = types.StringValue(createResp.Id)
+	plan.Name = types.StringValue(createResp.Name)
+	plan.LastCheck = types.StringValue(createResp.LastCheck)
+	plan.LastDataFound = types.StringValue(createResp.LastDataFound)
+	plan.Enabled = types.BoolValue(createResp.Enabled)
+
+	// Set state to fully populated data
+	diags = resp.State.Set(ctx, plan)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
 		return

@@ -140,11 +140,6 @@ func (d *containersJobResource) Create(ctx context.Context, req resource.CreateR
 	}
 	defer res.Body.Close()
 
-	// if res.StatusCode != http.StatusOK {
-	// 	resp.Diagnostics.AddError("API Error", fmt.Sprintf("Unable to create job, status code: %d", res.StatusCode))
-	// 	return
-	// }
-
 	resp_body, err := io.ReadAll(res.Body)
 	if err != nil {
 		tflog.Error(ctx, "error reading")
@@ -339,6 +334,10 @@ func (d *containersJobResource) Delete(ctx context.Context, req resource.DeleteR
 		return
 	}
 	defer response.Body.Close()
+
+	if response.StatusCode == http.StatusNotFound {
+		return
+	}
 
 	if response.StatusCode != http.StatusOK {
 		resp.Diagnostics.AddError("API Error", fmt.Sprintf("Unable to delete job, status code: %d", response.StatusCode))

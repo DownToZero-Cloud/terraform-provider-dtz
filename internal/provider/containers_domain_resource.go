@@ -35,6 +35,7 @@ type containersDomainResponse struct {
 	Name      string `json:"name"`
 	Verified  bool   `json:"verified"`
 	Created   string `json:"created"`
+	Updated   string `json:"updated"`
 }
 
 type createDomainRequest struct {
@@ -151,9 +152,8 @@ func (d *containersDomainResource) Create(ctx context.Context, req resource.Crea
 	plan.Verified = types.BoolValue(true)
 	plan.Created = types.StringValue(domainResponse.Created)
 
-	diags = resp.State.Set(ctx, plan)
+	diags = resp.State.Set(ctx, &plan)
 	resp.Diagnostics.Append(diags...)
-
 }
 
 func (d *containersDomainResource) Read(ctx context.Context, req resource.ReadRequest, resp *resource.ReadResponse) {
@@ -188,6 +188,12 @@ func (d *containersDomainResource) Read(ctx context.Context, req resource.ReadRe
 	body, err := io.ReadAll(response.Body)
 	if err != nil {
 		resp.Diagnostics.AddError("Client Error", fmt.Sprintf("Unable to read response body, got error: %s", err))
+		return
+	}
+
+	if response.StatusCode == http.StatusNotFound {
+		diags = resp.State.Set(ctx, state)
+		resp.Diagnostics.Append(diags...)
 		return
 	}
 
@@ -247,6 +253,10 @@ func (d *containersDomainResource) Delete(ctx context.Context, req resource.Dele
 		return
 	}
 	defer response.Body.Close()
+
+	if response.StatusCode == http.StatusNotFound {
+		return
+	}
 
 	if response.StatusCode != http.StatusOK {
 		resp.Diagnostics.AddError("API Error", fmt.Sprintf("Unable to delete domain, status code: %d", response.StatusCode))

@@ -250,6 +250,12 @@ func (d *containersServiceResource) Read(ctx context.Context, req resource.ReadR
 		return
 	}
 
+	if response.StatusCode == http.StatusNotFound {
+		diags = resp.State.Set(ctx, state)
+		resp.Diagnostics.Append(diags...)
+		return
+	}
+
 	var serviceResponse containersServiceResponse
 	err = json.Unmarshal(body, &serviceResponse)
 	if err != nil {

@@ -23,39 +23,36 @@ func newContainersJobResource() resource.Resource {
 }
 
 type containersJobResource struct {
-	Id                      types.String `tfsdk:"id"`
-	Name                    types.String `tfsdk:"name"`
-	ContainerImage          types.String `tfsdk:"container_image"`
-	ContainerPullUser       types.String `tfsdk:"container_pull_user"`
-	ContainerPullPwd        types.String `tfsdk:"container_pull_pwd"`
-	ScheduleType            types.String `tfsdk:"schedule_type"`
-	ScheduleRepeat          types.String `tfsdk:"schedule_repeat"`
-	ScheduleCron            types.String `tfsdk:"schedule_cron"`
-	ScheduleCostOptimzation types.String `tfsdk:"schedule_cost_optimization"`
-	api_key                 string
+	Id                types.String `tfsdk:"id"`
+	Name              types.String `tfsdk:"name"`
+	ContainerImage    types.String `tfsdk:"container_image"`
+	ContainerPullUser types.String `tfsdk:"container_pull_user"`
+	ContainerPullPwd  types.String `tfsdk:"container_pull_pwd"`
+	ScheduleType      types.String `tfsdk:"schedule_type"`
+	ScheduleRepeat    types.String `tfsdk:"schedule_repeat"`
+	ScheduleCron      types.String `tfsdk:"schedule_cron"`
+	api_key           string
 }
 
 type containersJobResponse struct {
-	Id                      string  `json:"id"`
-	Name                    string  `json:"name"`
-	ContainerImage          string  `json:"containerImage"`
-	ContainerPullUser       *string `json:"containerPullUser"`
-	ContainerPullPwd        *string `json:"containerPullPwd"`
-	ScheduleType            string  `json:"scheduleType"`
-	ScheduleRepeat          *string `json:"scheduleRepeat"`
-	ScheduleCron            *string `json:"scheduleCron"`
-	ScheduleCostOptimzation *string `json:"scheduleCostOptimzation"`
+	Id                string  `json:"id"`
+	Name              string  `json:"name"`
+	ContainerImage    string  `json:"containerImage"`
+	ContainerPullUser *string `json:"containerPullUser"`
+	ContainerPullPwd  *string `json:"containerPullPwd"`
+	ScheduleType      string  `json:"scheduleType"`
+	ScheduleRepeat    *string `json:"scheduleRepeat"`
+	ScheduleCron      *string `json:"scheduleCron"`
 }
 
 type createJobRequest struct {
-	Name                    string `json:"name"`
-	ContainerImage          string `json:"containerImage"`
-	ContainerPullUser       string `json:"containerPullUser,omitempty"`
-	ContainerPullPwd        string `json:"containerPullPwd,omitempty"`
-	ScheduleType            string `json:"scheduleType"`
-	ScheduleCron            string `json:"scheduleCron,omitempty"`
-	ScheduleCostOptimzation string `json:"scheduleCostOptimzation,omitempty"`
-	ScheduleRepeat          string `json:"scheduleRepeat,omitempty"`
+	Name              string `json:"name"`
+	ContainerImage    string `json:"containerImage"`
+	ContainerPullUser string `json:"containerPullUser,omitempty"`
+	ContainerPullPwd  string `json:"containerPullPwd,omitempty"`
+	ScheduleType      string `json:"scheduleType"`
+	ScheduleCron      string `json:"scheduleCron,omitempty"`
+	ScheduleRepeat    string `json:"scheduleRepeat,omitempty"`
 }
 
 func (d *containersJobResource) Metadata(_ context.Context, req resource.MetadataRequest, resp *resource.MetadataResponse) {
@@ -90,9 +87,6 @@ func (d *containersJobResource) Schema(_ context.Context, _ resource.SchemaReque
 			"schedule_cron": schema.StringAttribute{
 				Optional: true,
 			},
-			"schedule_cost_optimization": schema.StringAttribute{
-				Optional: true,
-			},
 		},
 	}
 }
@@ -106,14 +100,13 @@ func (d *containersJobResource) Create(ctx context.Context, req resource.CreateR
 	}
 
 	createJob := createJobRequest{
-		Name:                    plan.Name.ValueString(),
-		ContainerImage:          plan.ContainerImage.ValueString(),
-		ContainerPullUser:       plan.ContainerPullUser.ValueString(),
-		ContainerPullPwd:        plan.ContainerPullPwd.ValueString(),
-		ScheduleType:            plan.ScheduleType.ValueString(),
-		ScheduleCron:            plan.ScheduleCron.ValueString(),
-		ScheduleCostOptimzation: plan.ScheduleCostOptimzation.ValueString(),
-		ScheduleRepeat:          plan.ScheduleRepeat.ValueString(),
+		Name:              plan.Name.ValueString(),
+		ContainerImage:    plan.ContainerImage.ValueString(),
+		ContainerPullUser: plan.ContainerPullUser.ValueString(),
+		ContainerPullPwd:  plan.ContainerPullPwd.ValueString(),
+		ScheduleType:      plan.ScheduleType.ValueString(),
+		ScheduleCron:      plan.ScheduleCron.ValueString(),
+		ScheduleRepeat:    plan.ScheduleRepeat.ValueString(),
 	}
 
 	body, err := json.Marshal(createJob)
@@ -174,7 +167,6 @@ func (d *containersJobResource) Create(ctx context.Context, req resource.CreateR
 	plan.ScheduleType = types.StringValue(jobResponse.ScheduleType)
 	plan.ScheduleRepeat = types.StringPointerValue(jobResponse.ScheduleRepeat)
 	plan.ScheduleCron = types.StringPointerValue(jobResponse.ScheduleCron)
-	plan.ScheduleCostOptimzation = types.StringPointerValue(jobResponse.ScheduleCostOptimzation)
 
 	diags = resp.State.Set(ctx, plan)
 	resp.Diagnostics.Append(diags...)
@@ -216,10 +208,17 @@ func (d *containersJobResource) Read(ctx context.Context, req resource.ReadReque
 		return
 	}
 
+	if response.StatusCode == http.StatusNotFound {
+		diags = resp.State.Set(ctx, state)
+		resp.Diagnostics.Append(diags...)
+		return
+	}
+
 	var jobResponse containersJobResponse
 	err = json.Unmarshal(body, &jobResponse)
 	if err != nil {
-		resp.Diagnostics.AddError("Client Error", fmt.Sprintf("Unable to parse response, got error: %s", err))
+		statusCode := response.StatusCode
+		resp.Diagnostics.AddError("Client Error", fmt.Sprintf("Unable to parse response, got error: %s\nstatus code: %d, body: %s", err, statusCode, string(body)))
 		return
 	}
 	var result containersJobResource
@@ -231,7 +230,6 @@ func (d *containersJobResource) Read(ctx context.Context, req resource.ReadReque
 	result.ScheduleType = types.StringValue(jobResponse.ScheduleType)
 	result.ScheduleRepeat = types.StringPointerValue(jobResponse.ScheduleRepeat)
 	result.ScheduleCron = types.StringPointerValue(jobResponse.ScheduleCron)
-	result.ScheduleCostOptimzation = types.StringPointerValue(jobResponse.ScheduleCostOptimzation)
 
 	diags = resp.State.Set(ctx, &result)
 	resp.Diagnostics.Append(diags...)
@@ -246,14 +244,13 @@ func (d *containersJobResource) Update(ctx context.Context, req resource.UpdateR
 	}
 
 	updateJob := createJobRequest{
-		Name:                    plan.Name.ValueString(),
-		ContainerImage:          plan.ContainerImage.ValueString(),
-		ContainerPullUser:       plan.ContainerPullUser.ValueString(),
-		ContainerPullPwd:        plan.ContainerPullPwd.ValueString(),
-		ScheduleType:            plan.ScheduleType.ValueString(),
-		ScheduleCron:            plan.ScheduleCron.ValueString(),
-		ScheduleCostOptimzation: plan.ScheduleCostOptimzation.ValueString(),
-		ScheduleRepeat:          plan.ScheduleRepeat.ValueString(),
+		Name:              plan.Name.ValueString(),
+		ContainerImage:    plan.ContainerImage.ValueString(),
+		ContainerPullUser: plan.ContainerPullUser.ValueString(),
+		ContainerPullPwd:  plan.ContainerPullPwd.ValueString(),
+		ScheduleType:      plan.ScheduleType.ValueString(),
+		ScheduleCron:      plan.ScheduleCron.ValueString(),
+		ScheduleRepeat:    plan.ScheduleRepeat.ValueString(),
 	}
 
 	body, err := json.Marshal(updateJob)
@@ -307,7 +304,6 @@ func (d *containersJobResource) Update(ctx context.Context, req resource.UpdateR
 	plan.ScheduleType = types.StringValue(jobResponse.ScheduleType)
 	plan.ScheduleRepeat = types.StringPointerValue(jobResponse.ScheduleRepeat)
 	plan.ScheduleCron = types.StringPointerValue(jobResponse.ScheduleCron)
-	plan.ScheduleCostOptimzation = types.StringPointerValue(jobResponse.ScheduleCostOptimzation)
 
 	diags = resp.State.Set(ctx, plan)
 	resp.Diagnostics.Append(diags...)

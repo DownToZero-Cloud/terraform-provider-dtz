@@ -24,6 +24,7 @@ resource "dtz_containers_domain" "example" {
 ### Required
 
 - `name` (String) The name of the domain.
+  - Changing this value always forces a recreate.
 
 ### Read-Only
 

@@ -84,7 +84,7 @@ func (p *dtzProvider) Configure(ctx context.Context, req provider.ConfigureReque
 		if err != nil {
 			resp.Diagnostics.AddError(
 				"Unable to enable RSS2Email service",
-				fmt.Sprintf("An error occurred when calling the enable endpoint: %s", err),
+				fmt.Sprintf("An error occurred when calling the RSS2Email service endpoint: %s", err),
 			)
 			return
 		}
@@ -95,7 +95,7 @@ func (p *dtzProvider) Configure(ctx context.Context, req provider.ConfigureReque
 		if err != nil {
 			resp.Diagnostics.AddError(
 				"Unable to enable Containers service",
-				fmt.Sprintf("An error occurred when calling the enable endpoint: %s", err),
+				fmt.Sprintf("An error occurred when calling the Containers service endpoint: %s", err),
 			)
 			return
 		}
@@ -106,7 +106,7 @@ func (p *dtzProvider) Configure(ctx context.Context, req provider.ConfigureReque
 		if err != nil {
 			resp.Diagnostics.AddError(
 				"Unable to enable Objectstore service",
-				fmt.Sprintf("An error occurred when calling the enable endpoint: %s", err),
+				fmt.Sprintf("An error occurred when calling the Objectstore service endpoint: %s", err),
 			)
 			return
 		}
@@ -117,7 +117,7 @@ func (p *dtzProvider) Configure(ctx context.Context, req provider.ConfigureReque
 		if err != nil {
 			resp.Diagnostics.AddError(
 				"Unable to enable Container Registry service",
-				fmt.Sprintf("An error occurred when calling the enable endpoint: %s", err),
+				fmt.Sprintf("An error occurred when calling the Container Registry service endpoint: %s", err),
 			)
 			return
 		}
@@ -128,7 +128,7 @@ func (p *dtzProvider) Configure(ctx context.Context, req provider.ConfigureReque
 		if err != nil {
 			resp.Diagnostics.AddError(
 				"Unable to enable Observability service",
-				fmt.Sprintf("An error occurred when calling the enable endpoint: %s", err),
+				fmt.Sprintf("An error occurred when calling the Observability service endpoint: %s", err),
 			)
 			return
 		}
@@ -226,7 +226,7 @@ func enableObjectstoreService(ctx context.Context, apiKey string) error {
 }
 
 func enableContainerregistryService(ctx context.Context, apiKey string) error {
-	url := "https://containerregistry.dtz.rocks/api/2023-12-28/enable"
+	url := "https://cr.dtz.rocks/api/2023-12-28/enable"
 	req, err := http.NewRequestWithContext(ctx, http.MethodPost, url, nil)
 	if err != nil {
 		return fmt.Errorf("error creating request: %w", err)

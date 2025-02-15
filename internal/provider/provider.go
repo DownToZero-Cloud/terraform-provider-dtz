@@ -148,6 +148,7 @@ func (p *dtzProvider) DataSources(_ context.Context) []func() datasource.DataSou
 
 func (p *dtzProvider) Resources(_ context.Context) []func() resource.Resource {
 	return []func() resource.Resource{
+		newIdentityApikeyResource,
 		newRss2emailFeedResource,
 		newRss2emailProfileResource,
 		newContainersJobResource,

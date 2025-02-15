@@ -1,0 +1,548 @@
+openapi: 3.1.0
+info:
+  title: DTZ Identity
+  version: 1.0.19
+  description: a generated client for the DTZ Identity API
+  license:
+    name: Apache 2.0
+    url: https://www.apache.org/licenses/LICENSE-2.0.html
+  contact:
+    name: Jens Walter
+    email: jens@apimeister.com
+servers:
+- url: https://identity.dtz.rocks/api/2021-02-21
+paths:
+  /auth/apikey:
+    post:
+      summary: authenticate with apikey
+      operationId: authenticateApikey
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ApikeyRequest'
+      responses:
+        "200":
+          description: success
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TokenResponse'
+  /signup:
+    post:
+      summary: create a new identity with the given email as account email, also create an authentication with the given credentials to allow a login, creates a default context
+      operationId: userSignup
+      requestBody:
+        description: signup
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SignupRequest'
+        required: true
+      responses:
+        "200":
+          description: user created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TokenResponse'
+        "500":
+          description: server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /authentication:
+    get:
+      summary: list user authentications
+      operationId: listAuthentication
+      responses:
+        "200":
+          description: list of authentication
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  identityId:
+                    type: string
+                    format: IdentityId
+                  userAuth:
+                    type: array
+                  apiKeyAuth:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        apiKey:
+                          type: string
+                        defaultContextId:
+                          type: string
+                          format: ContextId
+                        alias:
+                          type: string
+                  oauthAuth:
+                    type: array
+
+    post:
+      summary: update the user authentication, aka change you password
+      operationId: changeAuthentication
+      requestBody:
+        description: update an existing authentication
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                email:
+                  type: string
+                oldPassword:
+                  type: string
+                newPassword:
+                  type: string
+      responses:
+        "200":
+          description: success
+  /context/{context_id}:
+    delete:
+      summary: delete all roles attached to this context
+      operationId: deleteContextRoles
+      parameters:
+        - in: path
+          name: context_id
+          schema:
+            type: string
+            pattern: 'context-[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}'
+            examples:
+              - sample_id:
+                value: context-01909cb6-225b-7f11-8779-c401fbee19ff
+          required: true
+          description: context_id
+      responses:
+        "200":
+          description: status
+  /context/{context_id}/new:
+    post:
+      summary: create identity requirements for a new context
+      operationId: newContext
+      parameters:
+        - in: path
+          name: context_id
+          schema:
+            type: string
+            format: ContextId
+          required: true
+          description: context_id
+      requestBody:
+        description: context creation request
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                identity_id:
+                  type: string
+                  format: IdentityId
+                service_principal_id:
+                  type: string
+                  format: IdentityId
+      responses:
+        "200":
+          description: status
+  /identity/assume:
+    post: 
+      summary: assume identity
+      operationId: assumeIdentity
+      requestBody:
+        description: assume different identity
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                email:
+                  type: string
+                identity_id:
+                  type: string
+                  format: IdentityId
+      responses:
+        "200":
+          description: success
+          content: 
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TokenResponse'
+        "401":
+          description: Invalid input
+          content: 
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /me:
+    get:
+      summary: get account stats
+      operationId: getAccountStats
+      responses:
+        "200":
+          description: success
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  roles:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        contextId:
+                          type: string
+                          format: ContextId
+                        count:
+                          type: number
+                  identityCount: 
+                    type: number
+                  authenticationCount:
+                    type: number
+  /me/email:
+    get:
+      summary: Get account email
+      operationId: getAccountEmail
+      responses:
+        "200":
+          description: success
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  email:
+                    type: string
+        "404":
+          description: Email not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /me/identity:
+    delete:
+      summary: delete current identity
+      operationId: deleteIdentity
+      responses:
+        "200":
+          description: success
+  /me/identity/apikey:
+    post:
+      summary: create api key
+      operationId: createApiKey
+      requestBody:
+        description: api key creation
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                contextId:
+                  type: string
+                  format: ContextId
+                alias:
+                  type: string
+              required:
+              - contextId
+        required: true
+      responses:
+        "200":
+          description: success
+          content:
+            text/plain:
+              schema:
+                type: string
+              examples:
+                text:
+                  summary: api key
+                  value: apikey-00000000-0000-0000-0000-000000000000
+  /me/identity/apikey/{apikey}:
+    delete:
+      summary: delete api key
+      operationId: deleteApiKey
+      parameters:
+        - in: path
+          name: apikey
+          schema:
+            type: string
+            format: ApikeyId
+          required: true
+          description: api key
+      responses:
+        "200":
+          description: success
+  /me/roles/{roleId}:
+    post:
+      summary: create role assignment
+      operationId: assignRole
+      parameters:
+        - in: path
+          name: roleId
+          schema:
+            type: string
+            format: RoleId
+          required: true
+          description: role id
+      responses:
+        "200":
+          description: success
+    delete:
+      summary: remove role assignment from identity
+      operationId: removeRoleAssignment
+      parameters:
+        - in: path
+          name: roleId
+          schema:
+            type: string
+            format: RoleId
+          required: true
+          description: role id
+      responses:
+        "200":
+          description: success
+  /token/auth:
+    post:
+      summary: user login
+      operationId: userLogin
+      requestBody:
+        description: login
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AuthRequest'
+        required: true
+      responses:
+        "200":
+          description: success
+          content: 
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TokenResponse'
+        "401":
+          description: Invalid input
+          content: 
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /token/refresh:
+    post:
+      summary: token refresh
+      description: token refresh
+      operationId: tokenRefresh
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ChangeContextRequest'
+        required: true
+      responses:
+        "200":
+          description: success
+          content: 
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TokenResponse'
+  /roles:
+    get:
+      summary: get roles
+      operationId: getRoles
+      responses:
+        "200":
+          description: success
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  roles:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Role'
+  /oauth/authorize:
+    get:
+      summary: oauth authorize
+      operationId: oauthAuthorize
+      x-dtz-include-headers: true
+      parameters: 
+        - in: query
+          name: response_type
+          schema:
+            type: string
+          required: true
+        - in: query
+          name: client_id
+          schema:
+            type: string
+          required: true
+        - in: query
+          name: redirect_uri
+          schema:
+            type: string
+          required: true
+        - in: query
+          name: scope
+          schema:
+            type: string
+          required: true
+        - in: query
+          name: state
+          schema:
+            type: string
+        - in: query
+          name: nonce
+          schema:
+            type: string
+      responses:
+        "302":
+          description: success
+          headers:
+            Location:
+              schema:
+                type: string
+              description: redirect uri
+        "401":
+          description: unauthorized
+  /oauth/token:
+    post:
+      summary: oauth token request
+      description: oauth token request
+      operationId: oauthToken
+      requestBody:
+        content:
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/OauthTokenRequest'
+        required: true
+      responses:
+        "200":
+          description: success
+          content: 
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TokenResponse'      
+components:
+  schemas:
+    ApikeyRequest:
+      type: object
+      properties:
+        apiKey:
+          type: string
+        contextId:
+          type: string
+          format: ContextId
+      required:
+      - apiKey
+    ErrorResponse:
+      required:
+      - status
+      type: object
+      properties:
+        status:
+          type: string
+    SignupRequest:
+      type: object
+      properties:
+        email:
+          type: string
+        password:
+          type: string
+      required:
+        - email
+        - password
+    AuthRequest:
+      type: object
+      properties:
+        username:
+          type: string
+        password:
+          type: string
+        scopes:
+          type: array
+          items:
+            type: string
+      required:
+        - username
+        - password
+    ChangeContextRequest:
+      type: object
+      properties:
+        contextId:
+          type: string
+          format: ContextId
+    TokenResponse:
+      type: object
+      properties:
+        access_token:
+          type: string
+        scope:
+          type: string
+        token_type:
+          type: string
+        expires_in:
+          type: number
+      required:
+      - access_token
+      - token_type
+      - expires_in
+    Role:
+      type: object
+      properties:
+        roleId:
+          type: string
+          format: RoleId
+        roleAlias:
+          type: string
+        roleScope:
+          type: string
+        contextId:
+          type: string
+          format: ContextId
+        exposure:
+          type: string
+        assignedToUser:
+          type: boolean
+      required:
+        - roleId
+        - roleAlias
+        - roleScope
+        - exposure
+    OauthTokenRequest:
+      type: object
+      properties:
+        grant_type:
+          type: string
+        client_id:
+          type: string
+        client_secret:
+          type: string
+        redirect_uri:
+          type: string
+        code:
+          type: string
+      required:
+      - grant_type
+      - client_id
+      - client_secret
+      - redirect_uri
+      - code
+  securitySchemes:
+    dtz_auth:
+      type: oauth2
+      flows:
+        implicit:
+          authorizationUrl: http://identity.dtz.rocks/oauth
+          scopes:
+            write:pets: modify pets in your account
+            read:pets: read your pets
+    dtz_auth2:
+      type: apiKey
+      in: header
+      name: X-API-KEY
+security:
+  - dtz_auth: []
+  - dtz_auth2: []

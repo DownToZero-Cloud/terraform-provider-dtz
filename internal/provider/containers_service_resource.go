@@ -435,6 +435,10 @@ func (d *containersServiceResource) Delete(ctx context.Context, req resource.Del
 	}
 	defer response.Body.Close()
 
+	if response.StatusCode == http.StatusNotFound {
+		return
+	}
+
 	if response.StatusCode != http.StatusOK {
 		resp.Diagnostics.AddError("API Error", fmt.Sprintf("Unable to delete service, status code: %d", response.StatusCode))
 		return

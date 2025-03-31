@@ -110,7 +110,14 @@ func (d *containersDomainResource) Create(ctx context.Context, req resource.Crea
 		resp.Diagnostics.AddError("Client Error", fmt.Sprintf("Unable to create domain, got error: %s", err))
 		return
 	}
-	defer res.Body.Close()
+	defer func() {
+		err := res.Body.Close()
+		if err != nil {
+			tflog.Error(ctx, "error closing response body", map[string]interface{}{
+				"error": err,
+			})
+		}
+	}()
 
 	resp_body, err := io.ReadAll(res.Body)
 	if err != nil {

@@ -110,20 +110,14 @@ func (d *containersDomainResource) Create(ctx context.Context, req resource.Crea
 		resp.Diagnostics.AddError("Client Error", fmt.Sprintf("Unable to create domain, got error: %s", err))
 		return
 	}
-	defer func() {
-		err := res.Body.Close()
-		if err != nil {
-			tflog.Error(ctx, "error closing response body", map[string]interface{}{
-				"error": err,
-			})
-		}
-	}()
 
 	resp_body, err := io.ReadAll(res.Body)
 	if err != nil {
 		tflog.Error(ctx, "error reading")
 		return
 	}
+	defer deferredCloseResponseBody(ctx, res.Body)
+
 	tflog.Info(ctx, fmt.Sprintf("status: %d, body: %s", res.StatusCode, string(resp_body[:])))
 
 	var domainResponse containersDomainResponse
@@ -152,14 +146,7 @@ func (d *containersDomainResource) Create(ctx context.Context, req resource.Crea
 		resp.Diagnostics.AddError("Client Error", fmt.Sprintf("Unable to validate domain, got error: %s", err))
 		return
 	}
-	defer func() {
-		err := validateRes.Body.Close()
-		if err != nil {
-			tflog.Error(ctx, "error closing response body", map[string]interface{}{
-				"error": err,
-			})
-		}
-	}()
+	defer deferredCloseResponseBody(ctx, validateRes.Body)
 
 	if validateRes.StatusCode != http.StatusOK {
 		resp.Diagnostics.AddError("API Error", fmt.Sprintf("Unable to validate domain, status code: %d", validateRes.StatusCode))
@@ -202,14 +189,7 @@ func (d *containersDomainResource) Read(ctx context.Context, req resource.ReadRe
 		resp.Diagnostics.AddError("Client Error", fmt.Sprintf("Unable to read domain, got error: %s", err))
 		return
 	}
-	defer func() {
-		err := response.Body.Close()
-		if err != nil {
-			tflog.Error(ctx, "error closing response body", map[string]interface{}{
-				"error": err,
-			})
-		}
-	}()
+	defer deferredCloseResponseBody(ctx, response.Body)
 
 	body, err := io.ReadAll(response.Body)
 	if err != nil {
@@ -278,14 +258,7 @@ func (d *containersDomainResource) Delete(ctx context.Context, req resource.Dele
 		resp.Diagnostics.AddError("Client Error", fmt.Sprintf("Unable to delete domain, got error: %s", err))
 		return
 	}
-	defer func() {
-		err := response.Body.Close()
-		if err != nil {
-			tflog.Error(ctx, "error closing response body", map[string]interface{}{
-				"error": err,
-			})
-		}
-	}()
+	defer deferredCloseResponseBody(ctx, response.Body)
 
 	if response.StatusCode == http.StatusNotFound {
 		return

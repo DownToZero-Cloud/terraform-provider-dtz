@@ -101,15 +101,16 @@ func (d *rss2emailFeedDataSource) Read(ctx context.Context, req datasource.ReadR
 	client := &http.Client{}
 	response, err := client.Do(request)
 	if err != nil {
-		tflog.Error(ctx, "error fetching")
+		resp.Diagnostics.AddError("Client Error", fmt.Sprintf("Unable to read feed, got error: %s", err))
 		return
 	}
-	defer response.Body.Close()
+
 	body, err := io.ReadAll(response.Body)
 	if err != nil {
-		tflog.Error(ctx, "error reading")
+		resp.Diagnostics.AddError("Client Error", fmt.Sprintf("Unable to read response body, got error: %s", err))
 		return
 	}
+	defer deferredCloseResponseBody(ctx, response.Body)
 	tflog.Info(ctx, fmt.Sprintf("rssFeedDataSource Read status: %d, body: %s", response.StatusCode, string(body[:])))
 
 	var resp_type rss2emailFeedResponse

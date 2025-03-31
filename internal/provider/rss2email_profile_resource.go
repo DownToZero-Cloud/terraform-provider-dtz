@@ -149,6 +149,7 @@ func (d *rss2emailProfileResource) Read(ctx context.Context, req resource.ReadRe
 		resp.Diagnostics.AddError("Client Error", fmt.Sprintf("Unable to read response body, got error: %s", err))
 		return
 	}
+	defer deferredCloseResponseBody(ctx, response.Body)
 
 	var profileResponse rss2emailProfileResponse
 	err = json.Unmarshal(body, &profileResponse)

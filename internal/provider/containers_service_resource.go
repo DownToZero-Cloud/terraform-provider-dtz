@@ -459,11 +459,3 @@ func (d *containersServiceResource) Configure(ctx context.Context, req resource.
 	}
 	d.api_key = dtz.ApiKey
 }
-
-func deferredCloseResponseBody(ctx context.Context, body io.ReadCloser) {
-	if err := body.Close(); err != nil {
-		tflog.Error(ctx, "Error closing response body", map[string]interface{}{
-			"error": err,
-		})
-	}
-}

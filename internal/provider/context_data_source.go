@@ -22,9 +22,11 @@ func newContextDataSource() datasource.DataSource {
 }
 
 type contextDataSource struct {
-	Id      types.String `tfsdk:"id"`
-	Alias   types.String `tfsdk:"alias"`
-	api_key string
+	Id              types.String `tfsdk:"id"`
+	Alias           types.String `tfsdk:"alias"`
+	Created         types.String `tfsdk:"created"`
+	ContextIdentity types.String `tfsdk:"context_identity"`
+	api_key         string
 }
 
 type contextResponse struct {
@@ -46,6 +48,16 @@ func (d *contextDataSource) Schema(_ context.Context, _ datasource.SchemaRequest
 				Sensitive: false,
 			},
 			"alias": schema.StringAttribute{
+				Computed:  true,
+				Required:  false,
+				Sensitive: false,
+			},
+			"created": schema.StringAttribute{
+				Computed:  true,
+				Required:  false,
+				Sensitive: false,
+			},
+			"context_identity": schema.StringAttribute{
 				Computed:  true,
 				Required:  false,
 				Sensitive: false,
@@ -96,6 +108,8 @@ func (d *contextDataSource) Read(ctx context.Context, req datasource.ReadRequest
 
 	state.Alias = types.StringValue(resp_type.Alias)
 	state.Id = types.StringValue(resp_type.ContextId)
+	state.Created = types.StringValue(resp_type.Created)
+	state.ContextIdentity = types.StringValue(fmt.Sprintf("admin@%s.dtz.rocks", resp_type.ContextId))
 
 	// set state
 	diags := resp.State.Set(ctx, &state)

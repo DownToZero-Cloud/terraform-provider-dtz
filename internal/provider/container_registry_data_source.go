@@ -23,13 +23,13 @@ func newContainerRegistryDataSource() datasource.DataSource {
 
 type containerRegistryDataSource struct {
 	Url        types.String `tfsdk:"url"`
-	ImageCount types.String `tfsdk:"image_count"`
+	ImageCount types.Int64  `tfsdk:"image_count"`
 	api_key    string
 }
 
 type containerRegistryResponse struct {
 	Url        string `json:"serverUrl"`
-	ImageCount string `json:"imageCount"`
+	ImageCount int64  `json:"imageCount"`
 }
 
 func (d *containerRegistryDataSource) Metadata(_ context.Context, req datasource.MetadataRequest, resp *datasource.MetadataResponse) {
@@ -43,7 +43,7 @@ func (d *containerRegistryDataSource) Schema(_ context.Context, _ datasource.Sch
 				Computed:    true,
 				Description: "The URL of the container registry server",
 			},
-			"image_count": schema.StringAttribute{
+			"image_count": schema.Int64Attribute{
 				Computed:    true,
 				Description: "The number of images in the container registry",
 			},
@@ -95,7 +95,7 @@ func (d *containerRegistryDataSource) Read(ctx context.Context, req datasource.R
 	}
 
 	state.Url = types.StringValue(resp_type.Url)
-	state.ImageCount = types.StringValue(resp_type.ImageCount)
+	state.ImageCount = types.Int64Value(resp_type.ImageCount)
 
 	// set state
 	diags := resp.State.Set(ctx, &state)

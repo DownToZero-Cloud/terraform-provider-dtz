@@ -4,11 +4,14 @@ import (
 	"context"
 	"fmt"
 	"net/http"
+	"regexp"
 
+	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
 	"github.com/hashicorp/terraform-plugin-framework/provider"
 	"github.com/hashicorp/terraform-plugin-framework/provider/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
+	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 )
 
@@ -46,6 +49,13 @@ func (p *dtzProvider) Schema(_ context.Context, _ provider.SchemaRequest, resp *
 				Required:    true,
 				Sensitive:   true,
 				Description: "The API key for authentication",
+				Validators: []validator.String{
+					stringvalidator.LengthBetween(43, 43),
+					stringvalidator.RegexMatches(
+						regexp.MustCompile(`^apikey-`),
+						"must start with 'apikey-'",
+					),
+				},
 			},
 			"enable_service_containers": schema.BoolAttribute{
 				Optional:    true,
@@ -140,6 +150,7 @@ func (p *dtzProvider) Configure(ctx context.Context, req provider.ConfigureReque
 
 func (p *dtzProvider) DataSources(_ context.Context) []func() datasource.DataSource {
 	return []func() datasource.DataSource{
+		newContainerRegistryDataSource,
 		newContextDataSource,
 		newRss2emailFeedDataSource,
 		newRss2emailProfileDataSource,

@@ -16,7 +16,7 @@ terraform {
   required_providers {
     dtz = {
       source = "DownToZero-Cloud/dtz"
-      version = "~> 0.1.25"
+      version = "~> 0.1.33"
     }
   }
 }

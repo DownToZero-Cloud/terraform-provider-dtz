@@ -50,7 +50,7 @@ func (p *dtzProvider) Schema(_ context.Context, _ provider.SchemaRequest, resp *
 				Sensitive:   true,
 				Description: "The API key for authentication",
 				Validators: []validator.String{
-					stringvalidator.LengthBetween(43, 43),
+					stringvalidator.LengthBetween(30, 43),
 					stringvalidator.RegexMatches(
 						regexp.MustCompile(`^apikey-`),
 						"must start with 'apikey-'",

@@ -30,4 +30,4 @@ output "image_count" {
 ### Read-Only
 
 - `url` (String) The URL of the container registry server.
-- `image_count` (String) The number of images in the container registry. 
+- `image_count` (Int64) The number of images in the container registry. 

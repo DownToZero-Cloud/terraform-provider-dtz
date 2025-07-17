@@ -10,6 +10,10 @@ description: |-
 
 The `dtz_context` resource allows you to create, update, and delete contexts in the DownToZero.cloud service. A context represents a specific configuration or environment within the DTZ platform.
 
+[DTZ context docs](https://downtozero.cloud/docs/context/)
+
+In Terraform, the context is implicitly derived from the user session or fetched using the dtz_context data source—even if it’s not explicitly declared in the resource block.
+
 ## Example Usage
 
 ```terraform

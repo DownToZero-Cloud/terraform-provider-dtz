@@ -75,6 +75,58 @@ func TestNormalizeContainerImage(t *testing.T) {
 			input:    "myregistry:latest/myimage:v1.0",
 			expected: "myregistry:latest/myimage:v1.0",
 		},
+		// Bug fix test cases - empty ports
+		{
+			name:     "registry with empty port without tag",
+			input:    "registry:/myimage",
+			expected: "registry:/myimage:latest",
+		},
+		{
+			name:     "registry with empty port with tag",
+			input:    "registry:/myimage:v1.0",
+			expected: "registry:/myimage:v1.0",
+		},
+		{
+			name:     "registry with empty port with digest",
+			input:    "registry:/myimage@sha256:abc123",
+			expected: "registry:/myimage@sha256:abc123",
+		},
+		{
+			name:     "localhost with empty port without tag",
+			input:    "localhost:/myimage",
+			expected: "localhost:/myimage:latest",
+		},
+		{
+			name:     "localhost with empty port with tag",
+			input:    "localhost:/myimage:v1.0",
+			expected: "localhost:/myimage:v1.0",
+		},
+		{
+			name:     "localhost with empty port with digest",
+			input:    "localhost:/myimage@sha256:def456",
+			expected: "localhost:/myimage@sha256:def456",
+		},
+		// Additional edge cases for robustness
+		{
+			name:     "registry with non-numeric port",
+			input:    "registry:abc/myimage",
+			expected: "registry:abc/myimage:latest",
+		},
+		{
+			name:     "registry with non-numeric port and tag",
+			input:    "registry:abc/myimage:v2.0",
+			expected: "registry:abc/myimage:v2.0",
+		},
+		{
+			name:     "registry with mixed port (starts numeric)",
+			input:    "registry:123abc/myimage",
+			expected: "registry:123abc/myimage:latest",
+		},
+		{
+			name:     "registry with mixed port (starts non-numeric)",
+			input:    "registry:abc123/myimage",
+			expected: "registry:abc123/myimage:latest",
+		},
 		{
 			name:     "complex registry path without tag",
 			input:    "gcr.io/myproject/subproject/myimage",
@@ -84,6 +136,21 @@ func TestNormalizeContainerImage(t *testing.T) {
 			name:     "complex registry path with tag",
 			input:    "gcr.io/myproject/subproject/myimage:v1.0",
 			expected: "gcr.io/myproject/subproject/myimage:v1.0",
+		},
+		{
+			name:     "complex registry path with port without tag",
+			input:    "myregistry.com:8080/namespace/project/app",
+			expected: "myregistry.com:8080/namespace/project/app:latest",
+		},
+		{
+			name:     "complex registry path with port with tag",
+			input:    "myregistry.com:8080/namespace/project/app:v1.2.3",
+			expected: "myregistry.com:8080/namespace/project/app:v1.2.3",
+		},
+		{
+			name:     "complex registry path with empty port",
+			input:    "myregistry.com:/namespace/project/app",
+			expected: "myregistry.com:/namespace/project/app:latest",
 		},
 	}
 

@@ -51,7 +51,8 @@ func normalizeContainerImage(image string) string {
 		portPart := registryPart[colonIndex+1:]
 
 		// Check if the port part is numeric (simple check - just digits)
-		isNumericPort := true
+		// Also ensure the port part is not empty
+		isNumericPort := portPart != ""
 		for _, char := range portPart {
 			if char < '0' || char > '9' {
 				isNumericPort = false

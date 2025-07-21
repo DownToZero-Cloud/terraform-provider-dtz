@@ -2,57 +2,58 @@
 page_title: "dtz_containers_service Resource - terraform-provider-dtz"
 subcategory: ""
 description: |-
-  Manages a container service in the DownToZero.cloud service.
+  Manages a container service in the DownToZero.cloud platform.
 ---
 
 # dtz_containers_service (Resource)
 
-The `dtz_containers_service` resource allows you to create, update, and delete container services in the DownToZero.cloud service.
+Creates and manages a container service that runs your Docker container on the DownToZero.cloud platform.
 
 ## Example Usage
 
 ```terraform
-# Example 1: Using container_image with tag
-resource "dtz_containers_service" "service-with-tag" {
-    prefix = "/my-service"
-    container_image = "docker.io/library/nginx:latest"
-    env_variables = {
-        "KEY1" = "VALUE1"
-    }
-    login {
-        provider_name = "dtz"
-    }
+# Basic web service
+resource "dtz_containers_service" "web_app" {
+  prefix          = "/api"
+  container_image = "nginx:alpine"
 }
 
-# Example 2: Using container_image with digest
-resource "dtz_containers_service" "service-with-digest" {
-    prefix = "/my-service-digest"
-    container_image = "docker.io/library/nginx@sha256:abc123def456789abcdef123456789abcdef123456789abcdef123456789abcd"
-    env_variables = {
-        "KEY1" = "VALUE1"
-    }
-    login {
-        provider_name = "dtz"
-    }
+# Application with environment variables
+resource "dtz_containers_service" "app" {
+  prefix          = "/app"
+  container_image = "myregistry.com/myapp:v1.2.3"
+  
+  env_variables = {
+    PORT        = "8080"
+    DATABASE_URL = "postgres://..."
+    API_KEY     = var.api_key
+  }
 }
 
-# Example 3: Using container_image without tag (automatically appends :latest)
-resource "dtz_containers_service" "service-auto-latest" {
-    prefix = "/my-auto-latest"
-    container_image = "docker.io/library/nginx"  # Will become docker.io/library/nginx:latest
-    env_variables = {
-        "KEY1" = "VALUE1"
-        "KEY2" = "VALUE2"
-    }
-    login {
-        provider_name = "dtz"
-    }
+# Private registry with authentication
+resource "dtz_containers_service" "private_app" {
+  prefix              = "/private"
+  container_image     = "private-registry.com/app"
+  container_pull_user = "registry-user"
+  container_pull_pwd  = var.registry_password
+  
+  login {
+    provider_name = "dtz"
+  }
 }
 
-# Example 4: Minimal example without login block (login is optional)
-resource "dtz_containers_service" "service-minimal" {
-    prefix = "/minimal"
-    container_image = "nginx"
+# Using specific digest for immutable deployments
+resource "dtz_containers_service" "production" {
+  prefix          = "/prod"
+  container_image = "myapp@sha256:a1b2c3d4e5f6789..."
+  
+  env_variables = {
+    ENV = "production"
+  }
+  
+  login {
+    provider_name = "dtz"
+  }
 }
 ```
 
@@ -60,28 +61,59 @@ resource "dtz_containers_service" "service-minimal" {
 
 ### Required
 
-- `prefix` (String) A unique identifier for the service.
-- `container_image` (String) The container image to use for the service. Can include:
-  - **Tags**: `nginx:1.21`, `nginx:latest`
-  - **Digests**: `nginx@sha256:abc123...`
-  - **No tag/digest**: `nginx` (automatically becomes `nginx:latest`)
+- `prefix` (String) The URL path prefix for your service (e.g., `/api`, `/app`). Must be unique within your context.
+- `container_image` (String) The Docker image to run. Supports three formats:
+  - **With tag**: `nginx:1.21` or `myregistry.com/app:v2.0`
+  - **With digest**: `nginx@sha256:abc123...` (recommended for production)
+  - **Image only**: `nginx` (automatically becomes `nginx:latest`)
 
 ### Optional
 
-- `container_image_version` (String) **DEPRECATED**: Include the tag or digest directly in the `container_image` field instead. This field is maintained for backward compatibility only.
-- `container_pull_user` (String) Username for pulling the container image if it's in a private repository.
-- `container_pull_pwd` (String, Sensitive) Password for pulling the container image if it's in a private repository.
-- `env_variables` (Map of String) Environment variables to set in the container.
-- `login` (Block) Login configuration for the service. The `provider_name` must be set to "dtz" (currently the only supported provider).
+- `container_pull_user` (String) Username for authenticating with private container registries.
+- `container_pull_pwd` (String, Sensitive) Password for authenticating with private container registries.
+- `env_variables` (Map of String) Environment variables passed to the container at runtime.
+- `login` (Block) Enables DTZ authentication for the service. Contains:
+  - `provider_name` (String) Must be `"dtz"` (only supported provider).
 
 ### Read-Only
 
-- `id` (String) The ID of this resource.
+- `id` (String) The unique identifier of the service.
+
+### Deprecated
+
+- `container_image_version` (String) **DEPRECATED**: Use the tag or digest directly in `container_image` instead.
+
+## Argument Reference
+
+### Container Image Behavior
+
+The `container_image` field automatically normalizes image names:
+
+| Input | Result | Use Case |
+|-------|--------|----------|
+| `nginx` | `nginx:latest` | Development/testing |
+| `nginx:1.21` | `nginx:1.21` | Specific version |
+| `nginx@sha256:abc...` | `nginx@sha256:abc...` | Immutable production deployments |
+
+### Private Registry Authentication
+
+For private registries, provide both `container_pull_user` and `container_pull_pwd`:
+
+```terraform
+resource "dtz_containers_service" "private" {
+  prefix              = "/app"
+  container_image     = "private.registry.com/app:latest"
+  container_pull_user = "username"
+  container_pull_pwd  = var.registry_password
+}
+```
 
 ## Import
 
-Import is supported using the following syntax:
+Services can be imported using their service ID:
 
+```shell
+terraform import dtz_containers_service.example <service_id>
 ```
 
-```
+Find your service ID in the DTZ dashboard or via the API.

@@ -94,8 +94,9 @@ func (d *containersServiceResource) Schema(_ context.Context, _ resource.SchemaR
 				ElementType: types.StringType,
 				Optional:    true,
 			},
-			"login": schema.SingleNestedAttribute{
-				Optional: true,
+		},
+		Blocks: map[string]schema.Block{
+			"login": schema.SingleNestedBlock{
 				Attributes: map[string]schema.Attribute{
 					"provider_name": schema.StringAttribute{
 						Required: true,

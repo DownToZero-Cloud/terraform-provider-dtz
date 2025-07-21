@@ -225,6 +225,8 @@ func (d *containersServiceResource) Create(ctx context.Context, req resource.Cre
 		plan.Login = &LoginModel{
 			ProviderName: types.StringValue(serviceResponse.Login.ProviderName),
 		}
+	} else {
+		plan.Login = nil
 	}
 
 	diags = resp.State.Set(ctx, plan)
@@ -297,6 +299,8 @@ func (d *containersServiceResource) Read(ctx context.Context, req resource.ReadR
 		state.Login = &LoginModel{
 			ProviderName: types.StringValue(serviceResponse.Login.ProviderName),
 		}
+	} else {
+		state.Login = nil
 	}
 
 	diags = resp.State.Set(ctx, &state)
@@ -409,6 +413,8 @@ func (d *containersServiceResource) Update(ctx context.Context, req resource.Upd
 		plan.Login = &LoginModel{
 			ProviderName: types.StringValue(serviceResponse.Login.ProviderName),
 		}
+	} else {
+		plan.Login = nil
 	}
 
 	diags = resp.State.Set(ctx, plan)

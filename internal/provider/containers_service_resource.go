@@ -104,7 +104,7 @@ func (d *containersServiceResource) Schema(_ context.Context, _ resource.SchemaR
 			"login": schema.SingleNestedBlock{
 				Attributes: map[string]schema.Attribute{
 					"provider_name": schema.StringAttribute{
-						Required: true,
+						Optional: true,
 						Validators: []validator.String{
 							stringvalidator.OneOf("dtz"),
 						},
@@ -143,22 +143,21 @@ func (d *containersServiceResource) Create(ctx context.Context, req resource.Cre
 	}
 
 	if plan.Login != nil {
-		// Login block is provided, so provider_name must be set and valid
-		if plan.Login.ProviderName.IsNull() || plan.Login.ProviderName.IsUnknown() {
-			resp.Diagnostics.AddError("Validation Error", "provider_name is required when login block is provided")
-			return
-		}
+		// If login block is provided but provider_name is not set, treat as no login
+		if plan.Login.ProviderName.IsNull() || plan.Login.ProviderName.IsUnknown() || plan.Login.ProviderName.ValueString() == "" {
+			// Empty login block - don't include login in request
+		} else {
+			providerName := plan.Login.ProviderName.ValueString()
+			if providerName != "dtz" {
+				resp.Diagnostics.AddError("Validation Error", "provider_name must be 'dtz' (only supported provider)")
+				return
+			}
 
-		providerName := plan.Login.ProviderName.ValueString()
-		if providerName != "dtz" {
-			resp.Diagnostics.AddError("Validation Error", "provider_name must be 'dtz' (only supported provider)")
-			return
-		}
-
-		createService.Login = &struct {
-			ProviderName string `json:"providerName"`
-		}{
-			ProviderName: providerName,
+			createService.Login = &struct {
+				ProviderName string `json:"providerName"`
+			}{
+				ProviderName: providerName,
+			}
 		}
 	}
 
@@ -334,22 +333,21 @@ func (d *containersServiceResource) Update(ctx context.Context, req resource.Upd
 	}
 
 	if plan.Login != nil {
-		// Login block is provided, so provider_name must be set and valid
-		if plan.Login.ProviderName.IsNull() || plan.Login.ProviderName.IsUnknown() {
-			resp.Diagnostics.AddError("Validation Error", "provider_name is required when login block is provided")
-			return
-		}
+		// If login block is provided but provider_name is not set, treat as no login
+		if plan.Login.ProviderName.IsNull() || plan.Login.ProviderName.IsUnknown() || plan.Login.ProviderName.ValueString() == "" {
+			// Empty login block - don't include login in request
+		} else {
+			providerName := plan.Login.ProviderName.ValueString()
+			if providerName != "dtz" {
+				resp.Diagnostics.AddError("Validation Error", "provider_name must be 'dtz' (only supported provider)")
+				return
+			}
 
-		providerName := plan.Login.ProviderName.ValueString()
-		if providerName != "dtz" {
-			resp.Diagnostics.AddError("Validation Error", "provider_name must be 'dtz' (only supported provider)")
-			return
-		}
-
-		updateService.Login = &struct {
-			ProviderName string `json:"providerName"`
-		}{
-			ProviderName: providerName,
+			updateService.Login = &struct {
+				ProviderName string `json:"providerName"`
+			}{
+				ProviderName: providerName,
+			}
 		}
 	}
 

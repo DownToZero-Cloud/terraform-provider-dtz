@@ -33,7 +33,7 @@ resource "dtz_containers_service" "service-with-digest" {
 # Example 3: Using container_image without tag (automatically appends :latest)
 resource "dtz_containers_service" "service-auto-latest" {
     prefix = "/my-auto-latest"
-    container_image = "docker.io/library/nginx"  # Will become nginx:latest
+    container_image = "docker.io/library/nginx"  # Will become docker.io/library/nginx:latest
     env_variables = {
         "KEY1" = "VALUE1"
         "KEY2" = "VALUE2"
@@ -69,5 +69,7 @@ resource "dtz_containers_service" "service-auto-latest" {
 ## Import
 
 Import is supported using the following syntax:
+
+```
 
 ```

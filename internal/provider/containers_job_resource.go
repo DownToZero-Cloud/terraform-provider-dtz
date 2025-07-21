@@ -8,8 +8,10 @@ import (
 	"net/http"
 	"strings"
 
+	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
+	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 )
@@ -31,28 +33,31 @@ type containersJobResource struct {
 	ScheduleType      types.String `tfsdk:"schedule_type"`
 	ScheduleRepeat    types.String `tfsdk:"schedule_repeat"`
 	ScheduleCron      types.String `tfsdk:"schedule_cron"`
+	EnvVariables      types.Map    `tfsdk:"env_variables"`
 	api_key           string
 }
 
 type containersJobResponse struct {
-	Id                string  `json:"id"`
-	Name              string  `json:"name"`
-	ContainerImage    string  `json:"containerImage"`
-	ContainerPullUser *string `json:"containerPullUser"`
-	ContainerPullPwd  *string `json:"containerPullPwd"`
-	ScheduleType      string  `json:"scheduleType"`
-	ScheduleRepeat    *string `json:"scheduleRepeat"`
-	ScheduleCron      *string `json:"scheduleCron"`
+	Id                string            `json:"id"`
+	Name              string            `json:"name"`
+	ContainerImage    string            `json:"containerImage"`
+	ContainerPullUser *string           `json:"containerPullUser"`
+	ContainerPullPwd  *string           `json:"containerPullPwd"`
+	ScheduleType      string            `json:"scheduleType"`
+	ScheduleRepeat    *string           `json:"scheduleRepeat"`
+	ScheduleCron      *string           `json:"scheduleCron"`
+	EnvVariables      map[string]string `json:"envVariables"`
 }
 
 type createJobRequest struct {
-	Name              string `json:"name"`
-	ContainerImage    string `json:"containerImage"`
-	ContainerPullUser string `json:"containerPullUser,omitempty"`
-	ContainerPullPwd  string `json:"containerPullPwd,omitempty"`
-	ScheduleType      string `json:"scheduleType"`
-	ScheduleCron      string `json:"scheduleCron,omitempty"`
-	ScheduleRepeat    string `json:"scheduleRepeat,omitempty"`
+	Name              string            `json:"name"`
+	ContainerImage    string            `json:"containerImage"`
+	ContainerPullUser string            `json:"containerPullUser,omitempty"`
+	ContainerPullPwd  string            `json:"containerPullPwd,omitempty"`
+	ScheduleType      string            `json:"scheduleType"`
+	ScheduleCron      string            `json:"scheduleCron,omitempty"`
+	ScheduleRepeat    string            `json:"scheduleRepeat,omitempty"`
+	EnvVariables      map[string]string `json:"envVariables,omitempty"`
 }
 
 func (d *containersJobResource) Metadata(_ context.Context, req resource.MetadataRequest, resp *resource.MetadataResponse) {
@@ -80,12 +85,20 @@ func (d *containersJobResource) Schema(_ context.Context, _ resource.SchemaReque
 			},
 			"schedule_type": schema.StringAttribute{
 				Required: true,
+				Validators: []validator.String{
+					stringvalidator.OneOf("relaxed", "precise", "none"),
+				},
+				Description: "The schedule type. Must be one of: 'relaxed', 'precise', or 'none'.",
 			},
 			"schedule_repeat": schema.StringAttribute{
 				Optional: true,
 			},
 			"schedule_cron": schema.StringAttribute{
 				Optional: true,
+			},
+			"env_variables": schema.MapAttribute{
+				Optional:    true,
+				ElementType: types.StringType,
 			},
 		},
 	}
@@ -101,12 +114,23 @@ func (d *containersJobResource) Create(ctx context.Context, req resource.CreateR
 
 	createJob := createJobRequest{
 		Name:              plan.Name.ValueString(),
-		ContainerImage:    plan.ContainerImage.ValueString(),
+		ContainerImage:    normalizeContainerImage(plan.ContainerImage.ValueString()),
 		ContainerPullUser: plan.ContainerPullUser.ValueString(),
 		ContainerPullPwd:  plan.ContainerPullPwd.ValueString(),
 		ScheduleType:      plan.ScheduleType.ValueString(),
 		ScheduleCron:      plan.ScheduleCron.ValueString(),
 		ScheduleRepeat:    plan.ScheduleRepeat.ValueString(),
+	}
+
+	// Handle environment variables
+	if !plan.EnvVariables.IsNull() && !plan.EnvVariables.IsUnknown() {
+		var envVars map[string]string
+		diags = plan.EnvVariables.ElementsAs(ctx, &envVars, false)
+		resp.Diagnostics.Append(diags...)
+		if resp.Diagnostics.HasError() {
+			return
+		}
+		createJob.EnvVariables = envVars
 	}
 
 	body, err := json.Marshal(createJob)
@@ -147,6 +171,12 @@ func (d *containersJobResource) Create(ctx context.Context, req resource.CreateR
 	}
 	tflog.Info(ctx, fmt.Sprintf("status: %d, body: %s", res.StatusCode, string(resp_body[:])))
 
+	// Check if the response is an error
+	if res.StatusCode >= 400 {
+		resp.Diagnostics.AddError("API Error", fmt.Sprintf("API returned status %d: %s", res.StatusCode, string(resp_body)))
+		return
+	}
+
 	var jobResponse containersJobResponse
 	err = json.Unmarshal(resp_body, &jobResponse)
 	if err != nil {
@@ -162,6 +192,19 @@ func (d *containersJobResource) Create(ctx context.Context, req resource.CreateR
 	plan.ScheduleType = types.StringValue(jobResponse.ScheduleType)
 	plan.ScheduleRepeat = types.StringPointerValue(jobResponse.ScheduleRepeat)
 	plan.ScheduleCron = types.StringPointerValue(jobResponse.ScheduleCron)
+
+	// Handle environment variables in response
+	if jobResponse.EnvVariables != nil {
+		envVars, diags := types.MapValueFrom(ctx, types.StringType, jobResponse.EnvVariables)
+		resp.Diagnostics.Append(diags...)
+		if resp.Diagnostics.HasError() {
+			return
+		}
+		plan.EnvVariables = envVars
+	} else {
+		// Set to null if not provided in response
+		plan.EnvVariables = types.MapNull(types.StringType)
+	}
 
 	diags = resp.State.Set(ctx, plan)
 	resp.Diagnostics.Append(diags...)
@@ -226,6 +269,19 @@ func (d *containersJobResource) Read(ctx context.Context, req resource.ReadReque
 	result.ScheduleRepeat = types.StringPointerValue(jobResponse.ScheduleRepeat)
 	result.ScheduleCron = types.StringPointerValue(jobResponse.ScheduleCron)
 
+	// Handle environment variables in response
+	if jobResponse.EnvVariables != nil {
+		envVars, diags := types.MapValueFrom(ctx, types.StringType, jobResponse.EnvVariables)
+		resp.Diagnostics.Append(diags...)
+		if resp.Diagnostics.HasError() {
+			return
+		}
+		result.EnvVariables = envVars
+	} else {
+		// Set to null if not provided in response
+		result.EnvVariables = types.MapNull(types.StringType)
+	}
+
 	diags = resp.State.Set(ctx, &result)
 	resp.Diagnostics.Append(diags...)
 }
@@ -240,12 +296,23 @@ func (d *containersJobResource) Update(ctx context.Context, req resource.UpdateR
 
 	updateJob := createJobRequest{
 		Name:              plan.Name.ValueString(),
-		ContainerImage:    plan.ContainerImage.ValueString(),
+		ContainerImage:    normalizeContainerImage(plan.ContainerImage.ValueString()),
 		ContainerPullUser: plan.ContainerPullUser.ValueString(),
 		ContainerPullPwd:  plan.ContainerPullPwd.ValueString(),
 		ScheduleType:      plan.ScheduleType.ValueString(),
 		ScheduleCron:      plan.ScheduleCron.ValueString(),
 		ScheduleRepeat:    plan.ScheduleRepeat.ValueString(),
+	}
+
+	// Handle environment variables
+	if !plan.EnvVariables.IsNull() && !plan.EnvVariables.IsUnknown() {
+		var envVars map[string]string
+		diags = plan.EnvVariables.ElementsAs(ctx, &envVars, false)
+		resp.Diagnostics.Append(diags...)
+		if resp.Diagnostics.HasError() {
+			return
+		}
+		updateJob.EnvVariables = envVars
 	}
 
 	body, err := json.Marshal(updateJob)
@@ -279,13 +346,22 @@ func (d *containersJobResource) Update(ctx context.Context, req resource.UpdateR
 	}
 	defer deferredCloseResponseBody(ctx, res.Body)
 
-	if res.StatusCode != http.StatusOK {
-		resp.Diagnostics.AddError("API Error", fmt.Sprintf("Unable to update job, status code: %d", res.StatusCode))
+	resp_body, err := io.ReadAll(res.Body)
+	if err != nil {
+		resp.Diagnostics.AddError("Client Error", fmt.Sprintf("Unable to read response body, got error: %s", err))
+		return
+	}
+
+	tflog.Info(ctx, fmt.Sprintf("status: %d, body: %s", res.StatusCode, string(resp_body[:])))
+
+	// Check if the response is an error
+	if res.StatusCode >= 400 {
+		resp.Diagnostics.AddError("API Error", fmt.Sprintf("API returned status %d: %s", res.StatusCode, string(resp_body)))
 		return
 	}
 
 	var jobResponse containersJobResponse
-	err = json.NewDecoder(res.Body).Decode(&jobResponse)
+	err = json.Unmarshal(resp_body, &jobResponse)
 	if err != nil {
 		resp.Diagnostics.AddError("Client Error", fmt.Sprintf("Unable to parse response, got error: %s", err))
 		return
@@ -299,6 +375,19 @@ func (d *containersJobResource) Update(ctx context.Context, req resource.UpdateR
 	plan.ScheduleType = types.StringValue(jobResponse.ScheduleType)
 	plan.ScheduleRepeat = types.StringPointerValue(jobResponse.ScheduleRepeat)
 	plan.ScheduleCron = types.StringPointerValue(jobResponse.ScheduleCron)
+
+	// Handle environment variables in response
+	if jobResponse.EnvVariables != nil {
+		envVars, diags := types.MapValueFrom(ctx, types.StringType, jobResponse.EnvVariables)
+		resp.Diagnostics.Append(diags...)
+		if resp.Diagnostics.HasError() {
+			return
+		}
+		plan.EnvVariables = envVars
+	} else {
+		// Set to null if not provided in response
+		plan.EnvVariables = types.MapNull(types.StringType)
+	}
 
 	diags = resp.State.Set(ctx, plan)
 	resp.Diagnostics.Append(diags...)

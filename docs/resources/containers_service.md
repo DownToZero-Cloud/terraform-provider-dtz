@@ -37,7 +37,7 @@ resource "dtz_containers_service" "private_app" {
   container_pull_user = "registry-user"
   container_pull_pwd  = var.registry_password
   
-  login {
+  login = {
     provider_name = "dtz"
   }
 }
@@ -51,7 +51,7 @@ resource "dtz_containers_service" "production" {
     ENV = "production"
   }
   
-  login {
+  login = {
     provider_name = "dtz"
   }
 }
@@ -72,10 +72,7 @@ resource "dtz_containers_service" "production" {
 - `container_pull_user` (String) Username for authenticating with private container registries.
 - `container_pull_pwd` (String, Sensitive) Password for authenticating with private container registries.
 - `env_variables` (Map of String) Environment variables passed to the container at runtime.
-
-### Blocks
-
-- `login` (Block, Optional, Max: 1) Enables DTZ authentication for the service. If present, must contain:
+- `login` (Object, Optional) Enables DTZ authentication for the service. If provided, must contain:
   - `provider_name` (String, Required) Must be `"dtz"` (only supported provider).
 
 ### Read-Only
@@ -111,26 +108,26 @@ resource "dtz_containers_service" "private" {
 }
 ```
 
-### DTZ Authentication (Login Block)
+### DTZ Authentication (Login Attribute)
 
-The `login` block is **optional** and can be used in two ways:
+The `login` attribute is **optional** and can be used in two ways:
 
-- **No login block**: Service is publicly accessible
-- **Login block with provider_name = "dtz"**: Service requires DTZ authentication to access
+- **No login attribute**: Service is publicly accessible
+- **Login attribute with provider_name = "dtz"**: Service requires DTZ authentication to access
 
 ```terraform
-# Public service (no login block)
+# Public service (no login attribute)
 resource "dtz_containers_service" "public_api" {
   prefix          = "/public"
   container_image = "my-public-api:latest"
 }
 
-# Authenticated service (login block with provider_name)
+# Authenticated service (login attribute with provider_name)
 resource "dtz_containers_service" "private_api" {
   prefix          = "/private"
   container_image = "my-private-api:latest"
   
-  login {
+  login = {
     provider_name = "dtz"
   }
 }

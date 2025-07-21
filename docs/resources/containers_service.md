@@ -20,7 +20,7 @@ resource "dtz_containers_service" "service-with-tag" {
         "KEY1" = "VALUE1"
     }
     login {
-        provider_name = "github"
+        provider_name = "dtz"
     }
 }
 
@@ -32,7 +32,7 @@ resource "dtz_containers_service" "service-with-digest" {
         "KEY1" = "VALUE1"
     }
     login {
-        provider_name = "github"
+        provider_name = "dtz"
     }
 }
 
@@ -45,7 +45,7 @@ resource "dtz_containers_service" "service-auto-latest" {
         "KEY2" = "VALUE2"
     }
     login {
-        provider_name = "github"
+        provider_name = "dtz"
     }
 }
 
@@ -72,7 +72,7 @@ resource "dtz_containers_service" "service-minimal" {
 - `container_pull_user` (String) Username for pulling the container image if it's in a private repository.
 - `container_pull_pwd` (String, Sensitive) Password for pulling the container image if it's in a private repository.
 - `env_variables` (Map of String) Environment variables to set in the container.
-- `login` (Block) Login configuration for the service. Can only contain `provider_name`.
+- `login` (Block) Login configuration for the service. The `provider_name` must be set to "dtz" (currently the only supported provider).
 
 ### Read-Only
 

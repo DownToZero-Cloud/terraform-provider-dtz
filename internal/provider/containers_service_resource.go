@@ -8,8 +8,10 @@ import (
 	"net/http"
 	"strings"
 
+	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
+	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 )
@@ -103,6 +105,10 @@ func (d *containersServiceResource) Schema(_ context.Context, _ resource.SchemaR
 				Attributes: map[string]schema.Attribute{
 					"provider_name": schema.StringAttribute{
 						Required: true,
+						Validators: []validator.String{
+							stringvalidator.OneOf("dtz"),
+						},
+						Description: "The login provider name. Only 'dtz' is currently supported.",
 					},
 				},
 			},

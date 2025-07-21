@@ -315,6 +315,24 @@ func (d *containersServiceResource) Update(ctx context.Context, req resource.Upd
 		return
 	}
 
+	var state containersServiceResource
+	diags = req.State.Get(ctx, &state)
+	resp.Diagnostics.Append(diags...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	// Check if trying to remove login block (not supported by API)
+	if state.Login != nil && plan.Login == nil {
+		resp.Diagnostics.AddError(
+			"Unsupported Operation",
+			"Cannot remove authentication from an existing service. The API does not support removing the login block from an existing service. Please either:\n"+
+				"1. Keep the login block in your configuration, or\n"+
+				"2. Delete and recreate the service without authentication.",
+		)
+		return
+	}
+
 	updateService := createServiceRequest{
 		Prefix:                plan.Prefix.ValueString(),
 		ContainerImage:        normalizeContainerImage(plan.ContainerImage.ValueString()),

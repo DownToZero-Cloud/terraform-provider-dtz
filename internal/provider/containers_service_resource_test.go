@@ -89,6 +89,27 @@ func TestContainersServiceResource_ImageNormalization(t *testing.T) {
 			input:    "registry:123abc/myimage",
 			expected: "registry:123abc/myimage:latest",
 		},
+		// DTZ registry specific test cases
+		{
+			name:     "dtz registry with port and tag",
+			input:    "cr.dtz.rocks:3214/image-name:v0.1.2.3",
+			expected: "cr.dtz.rocks:3214/image-name:v0.1.2.3",
+		},
+		{
+			name:     "dtz registry with port and digest",
+			input:    "cr.dtz.rocks:3214/image-name@sha256:abc1234567890",
+			expected: "cr.dtz.rocks:3214/image-name@sha256:abc1234567890",
+		},
+		{
+			name:     "dtz registry with port, tag and digest",
+			input:    "cr.dtz.rocks:3214/image-name:v0.1.2.3@sha256:abc1234567890",
+			expected: "cr.dtz.rocks:3214/image-name:v0.1.2.3@sha256:abc1234567890",
+		},
+		{
+			name:     "dtz registry with port without tag",
+			input:    "cr.dtz.rocks:3214/image-name",
+			expected: "cr.dtz.rocks:3214/image-name:latest",
+		},
 	}
 
 	for _, tt := range tests {

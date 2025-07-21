@@ -15,7 +15,7 @@ The `dtz_containers_service` resource allows you to create, update, and delete c
 resource "dtz_containers_service" "my-service" {
     prefix = "/whatever"
     container_image = "docker.io/library/nginx"
-    container_image_version = "latest"
+    container_image_version = "@sha256:abc123def456789abcdef123456789abcdef123456789abcdef123456789abcd"
     env_variables = {
         "KEY1" = "VALUE1"
         "KEY2" = "VALUE2"
@@ -31,10 +31,11 @@ resource "dtz_containers_service" "my-service" {
 ### Required
 
 - `prefix` (String) A unique identifier for the service.
-- `container_image` (String) The container image to use for the service.
+- `container_image` (String) The container image to use for the service. Must not include tags (like `:latest`) or digests (like `@sha256:...`). Use the `container_image_version` field to specify versions.
 
 ### Optional
 
+- `container_image_version` (String) The specific version of the container image as a digest (e.g., `@sha256:abc123...`). Must start with `@` and be in digest format. Tags like `latest` or `1.0` are not allowed.
 - `container_pull_user` (String) Username for pulling the container image if it's in a private repository.
 - `container_pull_pwd` (String, Sensitive) Password for pulling the container image if it's in a private repository.
 - `env_variables` (Map of String) Environment variables to set in the container.

@@ -11,6 +11,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
+	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-framework/types/basetypes"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
@@ -25,39 +26,92 @@ func newContainersServiceResource() resource.Resource {
 }
 
 type containersServiceResource struct {
-	Id                types.String `tfsdk:"id"`
-	Prefix            types.String `tfsdk:"prefix"`
-	ContainerImage    types.String `tfsdk:"container_image"`
-	ContainerPullUser types.String `tfsdk:"container_pull_user"`
-	ContainerPullPwd  types.String `tfsdk:"container_pull_pwd"`
-	EnvVariables      types.Map    `tfsdk:"env_variables"`
-	Login             types.Object `tfsdk:"login"`
-	api_key           string
+	Id                    types.String `tfsdk:"id"`
+	Prefix                types.String `tfsdk:"prefix"`
+	ContainerImage        types.String `tfsdk:"container_image"`
+	ContainerImageVersion types.String `tfsdk:"container_image_version"`
+	ContainerPullUser     types.String `tfsdk:"container_pull_user"`
+	ContainerPullPwd      types.String `tfsdk:"container_pull_pwd"`
+	EnvVariables          types.Map    `tfsdk:"env_variables"`
+	Login                 types.Object `tfsdk:"login"`
+	api_key               string
 }
 
 type containersServiceResponse struct {
-	ContextId         string            `json:"contextId"`
-	ServiceId         string            `json:"serviceId"`
-	Created           string            `json:"created"`
-	Prefix            string            `json:"prefix"`
-	ContainerImage    string            `json:"containerImage"`
-	ContainerPullUser *string           `json:"containerPullUser"`
-	ContainerPullPwd  *string           `json:"containerPullPwd"`
-	EnvVariables      map[string]string `json:"envVariables"`
-	Login             *struct {
+	ContextId             string            `json:"contextId"`
+	ServiceId             string            `json:"serviceId"`
+	Created               string            `json:"created"`
+	Prefix                string            `json:"prefix"`
+	ContainerImage        string            `json:"containerImage"`
+	ContainerImageVersion *string           `json:"containerImageVersion"`
+	ContainerPullUser     *string           `json:"containerPullUser"`
+	ContainerPullPwd      *string           `json:"containerPullPwd"`
+	EnvVariables          map[string]string `json:"envVariables"`
+	Login                 *struct {
 		ProviderName string `json:"providerName"`
 	} `json:"login"`
 }
 
 type createServiceRequest struct {
-	Prefix            string            `json:"prefix"`
-	ContainerImage    string            `json:"containerImage"`
-	ContainerPullUser string            `json:"containerPullUser,omitempty"`
-	ContainerPullPwd  string            `json:"containerPullPwd,omitempty"`
-	EnvVariables      map[string]string `json:"envVariables,omitempty"`
-	Login             *struct {
+	Prefix                string            `json:"prefix"`
+	ContainerImage        string            `json:"containerImage"`
+	ContainerImageVersion string            `json:"containerImageVersion,omitempty"`
+	ContainerPullUser     string            `json:"containerPullUser,omitempty"`
+	ContainerPullPwd      string            `json:"containerPullPwd,omitempty"`
+	EnvVariables          map[string]string `json:"envVariables,omitempty"`
+	Login                 *struct {
 		ProviderName string `json:"providerName"`
 	} `json:"login,omitempty"`
+}
+
+// containerImageValidator is a custom validator for container image format
+type containerImageValidator struct{}
+
+func (v containerImageValidator) Description(_ context.Context) string {
+	return "validates that container image does not contain tags or digests"
+}
+
+func (v containerImageValidator) MarkdownDescription(ctx context.Context) string {
+	return v.Description(ctx)
+}
+
+func (v containerImageValidator) ValidateString(_ context.Context, req validator.StringRequest, resp *validator.StringResponse) {
+	if req.ConfigValue.IsNull() || req.ConfigValue.IsUnknown() {
+		return
+	}
+
+	if err := validateContainerImage(req.ConfigValue.ValueString()); err != nil {
+		resp.Diagnostics.AddAttributeError(
+			req.Path,
+			"Invalid Container Image Format",
+			err.Error(),
+		)
+	}
+}
+
+// containerImageVersionValidator is a custom validator for container image version format
+type containerImageVersionValidator struct{}
+
+func (v containerImageVersionValidator) Description(_ context.Context) string {
+	return "validates that container image version is a digest format"
+}
+
+func (v containerImageVersionValidator) MarkdownDescription(ctx context.Context) string {
+	return v.Description(ctx)
+}
+
+func (v containerImageVersionValidator) ValidateString(_ context.Context, req validator.StringRequest, resp *validator.StringResponse) {
+	if req.ConfigValue.IsNull() || req.ConfigValue.IsUnknown() {
+		return
+	}
+
+	if err := validateContainerImageVersion(req.ConfigValue.ValueString()); err != nil {
+		resp.Diagnostics.AddAttributeError(
+			req.Path,
+			"Invalid Container Image Version Format",
+			err.Error(),
+		)
+	}
 }
 
 func (d *containersServiceResource) Metadata(_ context.Context, req resource.MetadataRequest, resp *resource.MetadataResponse) {
@@ -75,6 +129,15 @@ func (d *containersServiceResource) Schema(_ context.Context, _ resource.SchemaR
 			},
 			"container_image": schema.StringAttribute{
 				Required: true,
+				Validators: []validator.String{
+					containerImageValidator{},
+				},
+			},
+			"container_image_version": schema.StringAttribute{
+				Optional: true,
+				Validators: []validator.String{
+					containerImageVersionValidator{},
+				},
 			},
 			"container_pull_user": schema.StringAttribute{
 				Optional: true,
@@ -108,10 +171,11 @@ func (d *containersServiceResource) Create(ctx context.Context, req resource.Cre
 	}
 
 	createService := createServiceRequest{
-		Prefix:            plan.Prefix.ValueString(),
-		ContainerImage:    plan.ContainerImage.ValueString(),
-		ContainerPullUser: plan.ContainerPullUser.ValueString(),
-		ContainerPullPwd:  plan.ContainerPullPwd.ValueString(),
+		Prefix:                plan.Prefix.ValueString(),
+		ContainerImage:        plan.ContainerImage.ValueString(),
+		ContainerImageVersion: plan.ContainerImageVersion.ValueString(),
+		ContainerPullUser:     plan.ContainerPullUser.ValueString(),
+		ContainerPullPwd:      plan.ContainerPullPwd.ValueString(),
 	}
 
 	if !plan.EnvVariables.IsNull() {
@@ -188,6 +252,7 @@ func (d *containersServiceResource) Create(ctx context.Context, req resource.Cre
 	plan.Id = types.StringValue(serviceResponse.ServiceId)
 	plan.Prefix = types.StringValue(serviceResponse.Prefix)
 	plan.ContainerImage = types.StringValue(serviceResponse.ContainerImage)
+	plan.ContainerImageVersion = types.StringPointerValue(serviceResponse.ContainerImageVersion)
 	plan.ContainerPullUser = types.StringPointerValue(serviceResponse.ContainerPullUser)
 	plan.ContainerPullPwd = types.StringPointerValue(serviceResponse.ContainerPullPwd)
 
@@ -266,6 +331,7 @@ func (d *containersServiceResource) Read(ctx context.Context, req resource.ReadR
 	state.Id = types.StringValue(serviceResponse.ServiceId)
 	state.Prefix = types.StringValue(serviceResponse.Prefix)
 	state.ContainerImage = types.StringValue(serviceResponse.ContainerImage)
+	state.ContainerImageVersion = types.StringPointerValue(serviceResponse.ContainerImageVersion)
 	state.ContainerPullUser = types.StringPointerValue(serviceResponse.ContainerPullUser)
 	state.ContainerPullPwd = types.StringPointerValue(serviceResponse.ContainerPullPwd)
 
@@ -302,10 +368,11 @@ func (d *containersServiceResource) Update(ctx context.Context, req resource.Upd
 	}
 
 	updateService := createServiceRequest{
-		Prefix:            plan.Prefix.ValueString(),
-		ContainerImage:    plan.ContainerImage.ValueString(),
-		ContainerPullUser: plan.ContainerPullUser.ValueString(),
-		ContainerPullPwd:  plan.ContainerPullPwd.ValueString(),
+		Prefix:                plan.Prefix.ValueString(),
+		ContainerImage:        plan.ContainerImage.ValueString(),
+		ContainerImageVersion: plan.ContainerImageVersion.ValueString(),
+		ContainerPullUser:     plan.ContainerPullUser.ValueString(),
+		ContainerPullPwd:      plan.ContainerPullPwd.ValueString(),
 	}
 
 	if !plan.EnvVariables.IsNull() {
@@ -379,6 +446,7 @@ func (d *containersServiceResource) Update(ctx context.Context, req resource.Upd
 	plan.Id = types.StringValue(serviceResponse.ServiceId)
 	plan.Prefix = types.StringValue(serviceResponse.Prefix)
 	plan.ContainerImage = types.StringValue(serviceResponse.ContainerImage)
+	plan.ContainerImageVersion = types.StringPointerValue(serviceResponse.ContainerImageVersion)
 	plan.ContainerPullUser = types.StringPointerValue(serviceResponse.ContainerPullUser)
 	plan.ContainerPullPwd = types.StringPointerValue(serviceResponse.ContainerPullPwd)
 

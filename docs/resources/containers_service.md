@@ -75,8 +75,8 @@ resource "dtz_containers_service" "production" {
 
 ### Blocks
 
-- `login` (Block, Optional, Max: 1) Enables DTZ authentication for the service. Contains:
-  - `provider_name` (String) Must be `"dtz"` (only supported provider).
+- `login` (Block, Optional, Max: 1) Enables DTZ authentication for the service. Can be empty or contain:
+  - `provider_name` (String, Optional) Must be `"dtz"` (only supported provider). If omitted, the login block is ignored.
 
 ### Read-Only
 
@@ -113,10 +113,11 @@ resource "dtz_containers_service" "private" {
 
 ### DTZ Authentication (Login Block)
 
-The `login` block is **optional** and only needed when your service requires DTZ authentication:
+The `login` block is **optional** and can be used in three ways:
 
-- **Without login**: Service is publicly accessible
-- **With login**: Service requires DTZ authentication to access
+- **No login block**: Service is publicly accessible
+- **Empty login block**: Service is publicly accessible (same as no login block)
+- **Login block with provider_name**: Service requires DTZ authentication to access
 
 ```terraform
 # Public service (no login block needed)
@@ -125,7 +126,17 @@ resource "dtz_containers_service" "public_api" {
   container_image = "my-public-api:latest"
 }
 
-# Authenticated service (login block required)
+# Also public service (empty login block)
+resource "dtz_containers_service" "public_api2" {
+  prefix          = "/public2"
+  container_image = "my-public-api:latest"
+  
+  login {
+    # Empty block - no authentication required
+  }
+}
+
+# Authenticated service (login block with provider_name)
 resource "dtz_containers_service" "private_api" {
   prefix          = "/private"
   container_image = "my-private-api:latest"

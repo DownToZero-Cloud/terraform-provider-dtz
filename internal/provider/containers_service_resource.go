@@ -8,11 +8,9 @@ import (
 	"net/http"
 	"strings"
 
-	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/types"
-	"github.com/hashicorp/terraform-plugin-framework/types/basetypes"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 )
 
@@ -24,6 +22,11 @@ func newContainersServiceResource() resource.Resource {
 	return &containersServiceResource{}
 }
 
+// LoginModel represents the login block
+type LoginModel struct {
+	ProviderName types.String `tfsdk:"provider_name"`
+}
+
 type containersServiceResource struct {
 	Id                    types.String `tfsdk:"id"`
 	Prefix                types.String `tfsdk:"prefix"`
@@ -32,7 +35,7 @@ type containersServiceResource struct {
 	ContainerPullUser     types.String `tfsdk:"container_pull_user"`
 	ContainerPullPwd      types.String `tfsdk:"container_pull_pwd"`
 	EnvVariables          types.Map    `tfsdk:"env_variables"`
-	Login                 types.Object `tfsdk:"login"`
+	Login                 *LoginModel  `tfsdk:"login"`
 	api_key               string
 }
 
@@ -133,19 +136,11 @@ func (d *containersServiceResource) Create(ctx context.Context, req resource.Cre
 		createService.EnvVariables = envVars
 	}
 
-	if !plan.Login.IsNull() {
-		var login struct {
-			ProviderName string `tfsdk:"provider_name"`
-		}
-		diags = plan.Login.As(ctx, &login, basetypes.ObjectAsOptions{})
-		resp.Diagnostics.Append(diags...)
-		if resp.Diagnostics.HasError() {
-			return
-		}
+	if plan.Login != nil {
 		createService.Login = &struct {
 			ProviderName string `json:"providerName"`
 		}{
-			ProviderName: login.ProviderName,
+			ProviderName: plan.Login.ProviderName.ValueString(),
 		}
 	}
 
@@ -209,16 +204,9 @@ func (d *containersServiceResource) Create(ctx context.Context, req resource.Cre
 	plan.EnvVariables = envVars
 
 	if serviceResponse.Login != nil {
-		login, diags := types.ObjectValueFrom(ctx, map[string]attr.Type{
-			"provider_name": types.StringType,
-		}, map[string]attr.Value{
-			"provider_name": types.StringValue(serviceResponse.Login.ProviderName),
-		})
-		resp.Diagnostics.Append(diags...)
-		if resp.Diagnostics.HasError() {
-			return
+		plan.Login = &LoginModel{
+			ProviderName: types.StringValue(serviceResponse.Login.ProviderName),
 		}
-		plan.Login = login
 	}
 
 	diags = resp.State.Set(ctx, plan)
@@ -288,16 +276,9 @@ func (d *containersServiceResource) Read(ctx context.Context, req resource.ReadR
 	state.EnvVariables = envVars
 
 	if serviceResponse.Login != nil {
-		login, diags := types.ObjectValueFrom(ctx, map[string]attr.Type{
-			"provider_name": types.StringType,
-		}, map[string]attr.Value{
-			"provider_name": types.StringValue(serviceResponse.Login.ProviderName),
-		})
-		resp.Diagnostics.Append(diags...)
-		if resp.Diagnostics.HasError() {
-			return
+		state.Login = &LoginModel{
+			ProviderName: types.StringValue(serviceResponse.Login.ProviderName),
 		}
-		state.Login = login
 	}
 
 	diags = resp.State.Set(ctx, &state)
@@ -330,19 +311,11 @@ func (d *containersServiceResource) Update(ctx context.Context, req resource.Upd
 		updateService.EnvVariables = envVars
 	}
 
-	if !plan.Login.IsNull() {
-		var login struct {
-			ProviderName string `tfsdk:"provider_name"`
-		}
-		diags = plan.Login.As(ctx, &login, basetypes.ObjectAsOptions{})
-		resp.Diagnostics.Append(diags...)
-		if resp.Diagnostics.HasError() {
-			return
-		}
+	if plan.Login != nil {
 		updateService.Login = &struct {
 			ProviderName string `json:"providerName"`
 		}{
-			ProviderName: login.ProviderName,
+			ProviderName: plan.Login.ProviderName.ValueString(),
 		}
 	}
 
@@ -403,16 +376,9 @@ func (d *containersServiceResource) Update(ctx context.Context, req resource.Upd
 	plan.EnvVariables = envVars
 
 	if serviceResponse.Login != nil {
-		login, diags := types.ObjectValueFrom(ctx, map[string]attr.Type{
-			"provider_name": types.StringType,
-		}, map[string]attr.Value{
-			"provider_name": types.StringValue(serviceResponse.Login.ProviderName),
-		})
-		resp.Diagnostics.Append(diags...)
-		if resp.Diagnostics.HasError() {
-			return
+		plan.Login = &LoginModel{
+			ProviderName: types.StringValue(serviceResponse.Login.ProviderName),
 		}
-		plan.Login = login
 	}
 
 	diags = resp.State.Set(ctx, plan)

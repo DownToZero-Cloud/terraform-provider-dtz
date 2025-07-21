@@ -19,6 +19,9 @@ resource "dtz_containers_service" "service-with-tag" {
     env_variables = {
         "KEY1" = "VALUE1"
     }
+    login {
+        provider_name = "github"
+    }
 }
 
 # Example 2: Using container_image with digest
@@ -27,6 +30,9 @@ resource "dtz_containers_service" "service-with-digest" {
     container_image = "docker.io/library/nginx@sha256:abc123def456789abcdef123456789abcdef123456789abcdef123456789abcd"
     env_variables = {
         "KEY1" = "VALUE1"
+    }
+    login {
+        provider_name = "github"
     }
 }
 
@@ -41,6 +47,12 @@ resource "dtz_containers_service" "service-auto-latest" {
     login {
         provider_name = "github"
     }
+}
+
+# Example 4: Minimal example without login block (login is optional)
+resource "dtz_containers_service" "service-minimal" {
+    prefix = "/minimal"
+    container_image = "nginx"
 }
 ```
 

@@ -2,9 +2,7 @@ package provider
 
 import (
 	"context"
-	"fmt"
 	"io"
-	"regexp"
 	"strings"
 
 	"github.com/hashicorp/terraform-plugin-log/tflog"
@@ -22,49 +20,18 @@ func deferredCloseResponseBody(ctx context.Context, body io.ReadCloser) func() {
 	}
 }
 
-// validateContainerImage validates that the container image does not contain tags or digests
-// Valid: docker.io/library/nginx, nginx, myregistry.com/myimage
-// Invalid: nginx:latest, nginx:1.0, nginx@sha256:abc123
-func validateContainerImage(image string) error {
+// normalizeContainerImage ensures that a container image has a tag or digest,
+// appending :latest if none is specified
+func normalizeContainerImage(image string) string {
 	if image == "" {
-		return nil // empty is allowed (will be caught by required validation)
+		return image
 	}
 
-	// Check for tag (contains :)
-	if strings.Contains(image, ":") {
-		return fmt.Errorf("container_image must not contain tags (found ':'). Use container_image_version field for specifying versions")
+	// Check if image already has a tag (contains :) or digest (contains @)
+	if strings.Contains(image, ":") || strings.Contains(image, "@") {
+		return image
 	}
 
-	// Check for digest (contains @)
-	if strings.Contains(image, "@") {
-		return fmt.Errorf("container_image must not contain digests (found '@'). Use container_image_version field for specifying versions")
-	}
-
-	return nil
-}
-
-// validateContainerImageVersion validates that the container image version contains only digests and not tags
-// Valid: @sha256:abc123def456..., @sha1:abc123
-// Invalid: latest, 1.0, v1.2.3
-func validateContainerImageVersion(version string) error {
-	if version == "" {
-		return nil // empty is allowed (optional field)
-	}
-
-	// Must start with @ to be a digest
-	if !strings.HasPrefix(version, "@") {
-		return fmt.Errorf("container_image_version must be a digest starting with '@' (e.g., @sha256:abc123). Tags like 'latest' or '1.0' are not allowed")
-	}
-
-	// Validate digest format: @<algorithm>:<hex>
-	digestPattern := `^@[a-z0-9]+:[a-f0-9]+$`
-	matched, err := regexp.MatchString(digestPattern, version)
-	if err != nil {
-		return fmt.Errorf("error validating container_image_version format: %v", err)
-	}
-	if !matched {
-		return fmt.Errorf("container_image_version must be in digest format @<algorithm>:<hex> (e.g., @sha256:abc123)")
-	}
-
-	return nil
+	// No tag or digest found, append :latest
+	return image + ":latest"
 }

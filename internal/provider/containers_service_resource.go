@@ -11,7 +11,6 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
-	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-framework/types/basetypes"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
@@ -64,56 +63,6 @@ type createServiceRequest struct {
 	} `json:"login,omitempty"`
 }
 
-// containerImageValidator is a custom validator for container image format
-type containerImageValidator struct{}
-
-func (v containerImageValidator) Description(_ context.Context) string {
-	return "validates that container image does not contain tags or digests"
-}
-
-func (v containerImageValidator) MarkdownDescription(ctx context.Context) string {
-	return v.Description(ctx)
-}
-
-func (v containerImageValidator) ValidateString(_ context.Context, req validator.StringRequest, resp *validator.StringResponse) {
-	if req.ConfigValue.IsNull() || req.ConfigValue.IsUnknown() {
-		return
-	}
-
-	if err := validateContainerImage(req.ConfigValue.ValueString()); err != nil {
-		resp.Diagnostics.AddAttributeError(
-			req.Path,
-			"Invalid Container Image Format",
-			err.Error(),
-		)
-	}
-}
-
-// containerImageVersionValidator is a custom validator for container image version format
-type containerImageVersionValidator struct{}
-
-func (v containerImageVersionValidator) Description(_ context.Context) string {
-	return "validates that container image version is a digest format"
-}
-
-func (v containerImageVersionValidator) MarkdownDescription(ctx context.Context) string {
-	return v.Description(ctx)
-}
-
-func (v containerImageVersionValidator) ValidateString(_ context.Context, req validator.StringRequest, resp *validator.StringResponse) {
-	if req.ConfigValue.IsNull() || req.ConfigValue.IsUnknown() {
-		return
-	}
-
-	if err := validateContainerImageVersion(req.ConfigValue.ValueString()); err != nil {
-		resp.Diagnostics.AddAttributeError(
-			req.Path,
-			"Invalid Container Image Version Format",
-			err.Error(),
-		)
-	}
-}
-
 func (d *containersServiceResource) Metadata(_ context.Context, req resource.MetadataRequest, resp *resource.MetadataResponse) {
 	resp.TypeName = req.ProviderTypeName + "_containers_service"
 }
@@ -129,15 +78,10 @@ func (d *containersServiceResource) Schema(_ context.Context, _ resource.SchemaR
 			},
 			"container_image": schema.StringAttribute{
 				Required: true,
-				Validators: []validator.String{
-					containerImageValidator{},
-				},
 			},
 			"container_image_version": schema.StringAttribute{
-				Optional: true,
-				Validators: []validator.String{
-					containerImageVersionValidator{},
-				},
+				Optional:           true,
+				DeprecationMessage: "This field is deprecated. Include the tag or digest directly in the container_image field instead.",
 			},
 			"container_pull_user": schema.StringAttribute{
 				Optional: true,
@@ -172,7 +116,7 @@ func (d *containersServiceResource) Create(ctx context.Context, req resource.Cre
 
 	createService := createServiceRequest{
 		Prefix:                plan.Prefix.ValueString(),
-		ContainerImage:        plan.ContainerImage.ValueString(),
+		ContainerImage:        normalizeContainerImage(plan.ContainerImage.ValueString()),
 		ContainerImageVersion: plan.ContainerImageVersion.ValueString(),
 		ContainerPullUser:     plan.ContainerPullUser.ValueString(),
 		ContainerPullPwd:      plan.ContainerPullPwd.ValueString(),
@@ -369,7 +313,7 @@ func (d *containersServiceResource) Update(ctx context.Context, req resource.Upd
 
 	updateService := createServiceRequest{
 		Prefix:                plan.Prefix.ValueString(),
-		ContainerImage:        plan.ContainerImage.ValueString(),
+		ContainerImage:        normalizeContainerImage(plan.ContainerImage.ValueString()),
 		ContainerImageVersion: plan.ContainerImageVersion.ValueString(),
 		ContainerPullUser:     plan.ContainerPullUser.ValueString(),
 		ContainerPullPwd:      plan.ContainerPullPwd.ValueString(),

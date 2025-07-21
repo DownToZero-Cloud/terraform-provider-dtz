@@ -12,10 +12,28 @@ The `dtz_containers_service` resource allows you to create, update, and delete c
 ## Example Usage
 
 ```terraform
-resource "dtz_containers_service" "my-service" {
-    prefix = "/whatever"
-    container_image = "docker.io/library/nginx"
-    container_image_version = "@sha256:abc123def456789abcdef123456789abcdef123456789abcdef123456789abcd"
+# Example 1: Using container_image with tag
+resource "dtz_containers_service" "service-with-tag" {
+    prefix = "/my-service"
+    container_image = "docker.io/library/nginx:latest"
+    env_variables = {
+        "KEY1" = "VALUE1"
+    }
+}
+
+# Example 2: Using container_image with digest
+resource "dtz_containers_service" "service-with-digest" {
+    prefix = "/my-service-digest"
+    container_image = "docker.io/library/nginx@sha256:abc123def456789abcdef123456789abcdef123456789abcdef123456789abcd"
+    env_variables = {
+        "KEY1" = "VALUE1"
+    }
+}
+
+# Example 3: Using container_image without tag (automatically appends :latest)
+resource "dtz_containers_service" "service-auto-latest" {
+    prefix = "/my-auto-latest"
+    container_image = "docker.io/library/nginx"  # Will become nginx:latest
     env_variables = {
         "KEY1" = "VALUE1"
         "KEY2" = "VALUE2"
@@ -31,11 +49,14 @@ resource "dtz_containers_service" "my-service" {
 ### Required
 
 - `prefix` (String) A unique identifier for the service.
-- `container_image` (String) The container image to use for the service. Must not include tags (like `:latest`) or digests (like `@sha256:...`). Use the `container_image_version` field to specify versions.
+- `container_image` (String) The container image to use for the service. Can include:
+  - **Tags**: `nginx:1.21`, `nginx:latest`
+  - **Digests**: `nginx@sha256:abc123...`
+  - **No tag/digest**: `nginx` (automatically becomes `nginx:latest`)
 
 ### Optional
 
-- `container_image_version` (String) The specific version of the container image as a digest (e.g., `@sha256:abc123...`). Must start with `@` and be in digest format. Tags like `latest` or `1.0` are not allowed.
+- `container_image_version` (String) **DEPRECATED**: Include the tag or digest directly in the `container_image` field instead. This field is maintained for backward compatibility only.
 - `container_pull_user` (String) Username for pulling the container image if it's in a private repository.
 - `container_pull_pwd` (String, Sensitive) Password for pulling the container image if it's in a private repository.
 - `env_variables` (Map of String) Environment variables to set in the container.
@@ -48,3 +69,5 @@ resource "dtz_containers_service" "my-service" {
 ## Import
 
 Import is supported using the following syntax:
+
+```

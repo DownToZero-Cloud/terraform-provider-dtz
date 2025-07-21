@@ -27,11 +27,49 @@ func normalizeContainerImage(image string) string {
 		return image
 	}
 
-	// Split the image into components based on '/' and ':'
-	parts := strings.Split(image, "/")
-	lastPart := parts[len(parts)-1]
+	// Handle the case where there's no '/' (just an image name)
+	if !strings.Contains(image, "/") {
+		// Check if it already has a tag or digest
+		if strings.Contains(image, ":") || strings.Contains(image, "@") {
+			return image
+		}
+		return image + ":latest"
+	}
 
-	// Check if the last part contains a tag (:) or digest (@)
+	// Split by '/' to separate registry from image path
+	parts := strings.Split(image, "/")
+
+	// If we have more than 2 parts, the first part might be a registry with port
+	// We need to check if the first part contains a port (colon followed by digits)
+	registryPart := parts[0]
+	imagePath := strings.Join(parts[1:], "/")
+
+	// Check if the registry part contains a port (colon followed by digits)
+	if strings.Contains(registryPart, ":") {
+		// Extract the port part after the colon
+		colonIndex := strings.Index(registryPart, ":")
+		portPart := registryPart[colonIndex+1:]
+
+		// Check if the port part is numeric (simple check - just digits)
+		isNumericPort := true
+		for _, char := range portPart {
+			if char < '0' || char > '9' {
+				isNumericPort = false
+				break
+			}
+		}
+
+		// If it's a numeric port, we need to check the image path for tags
+		if isNumericPort {
+			if strings.Contains(imagePath, ":") || strings.Contains(imagePath, "@") {
+				return image
+			}
+			return image + ":latest"
+		}
+	}
+
+	// For cases without ports or with non-numeric "ports", check the last part
+	lastPart := parts[len(parts)-1]
 	if strings.Contains(lastPart, ":") || strings.Contains(lastPart, "@") {
 		return image
 	}

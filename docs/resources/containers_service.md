@@ -12,13 +12,13 @@ Creates and manages a container service that runs your Docker container on the D
 ## Example Usage
 
 ```terraform
-# Basic web service
+# Basic web service (no authentication required)
 resource "dtz_containers_service" "web_app" {
   prefix          = "/api"
   container_image = "nginx:alpine"
 }
 
-# Application with environment variables
+# Application with environment variables (no authentication)
 resource "dtz_containers_service" "app" {
   prefix          = "/app"
   container_image = "myregistry.com/myapp:v1.2.3"
@@ -72,7 +72,10 @@ resource "dtz_containers_service" "production" {
 - `container_pull_user` (String) Username for authenticating with private container registries.
 - `container_pull_pwd` (String, Sensitive) Password for authenticating with private container registries.
 - `env_variables` (Map of String) Environment variables passed to the container at runtime.
-- `login` (Block) Enables DTZ authentication for the service. Contains:
+
+### Blocks
+
+- `login` (Block, Optional, Max: 1) Enables DTZ authentication for the service. Contains:
   - `provider_name` (String) Must be `"dtz"` (only supported provider).
 
 ### Read-Only
@@ -105,6 +108,31 @@ resource "dtz_containers_service" "private" {
   container_image     = "private.registry.com/app:latest"
   container_pull_user = "username"
   container_pull_pwd  = var.registry_password
+}
+```
+
+### DTZ Authentication (Login Block)
+
+The `login` block is **optional** and only needed when your service requires DTZ authentication:
+
+- **Without login**: Service is publicly accessible
+- **With login**: Service requires DTZ authentication to access
+
+```terraform
+# Public service (no login block needed)
+resource "dtz_containers_service" "public_api" {
+  prefix          = "/public"
+  container_image = "my-public-api:latest"
+}
+
+# Authenticated service (login block required)
+resource "dtz_containers_service" "private_api" {
+  prefix          = "/private"
+  container_image = "my-private-api:latest"
+  
+  login {
+    provider_name = "dtz"
+  }
 }
 ```
 

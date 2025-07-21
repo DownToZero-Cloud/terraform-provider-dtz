@@ -143,6 +143,10 @@ func (d *containersServiceResource) Create(ctx context.Context, req resource.Cre
 	}
 
 	if plan.Login != nil {
+		if plan.Login.ProviderName.IsNull() || plan.Login.ProviderName.IsUnknown() {
+			resp.Diagnostics.AddError("Validation Error", "provider_name is required when login block is provided")
+			return
+		}
 		createService.Login = &struct {
 			ProviderName string `json:"providerName"`
 		}{
@@ -318,6 +322,10 @@ func (d *containersServiceResource) Update(ctx context.Context, req resource.Upd
 	}
 
 	if plan.Login != nil {
+		if plan.Login.ProviderName.IsNull() || plan.Login.ProviderName.IsUnknown() {
+			resp.Diagnostics.AddError("Validation Error", "provider_name is required when login block is provided")
+			return
+		}
 		updateService.Login = &struct {
 			ProviderName string `json:"providerName"`
 		}{

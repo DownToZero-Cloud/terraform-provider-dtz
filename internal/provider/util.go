@@ -27,8 +27,12 @@ func normalizeContainerImage(image string) string {
 		return image
 	}
 
-	// Check if image already has a tag (contains :) or digest (contains @)
-	if strings.Contains(image, ":") || strings.Contains(image, "@") {
+	// Split the image into components based on '/' and ':'
+	parts := strings.Split(image, "/")
+	lastPart := parts[len(parts)-1]
+
+	// Check if the last part contains a tag (:) or digest (@)
+	if strings.Contains(lastPart, ":") || strings.Contains(lastPart, "@") {
 		return image
 	}
 

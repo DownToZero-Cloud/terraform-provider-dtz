@@ -9,7 +9,6 @@ import (
 	"strings"
 
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
-	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
@@ -45,44 +44,72 @@ func (e *EnvVariableValue) UnmarshalJSON(data []byte) error {
 		return err
 	}
 
-	// Check if it's an encrypted object
-	if encryptionKey, ok := obj["encryptionKey"].(string); ok {
-		if encryptedValue, ok := obj["encryptedValue"].(string); ok {
-			e.EncryptionKey = &encryptionKey
-			e.EncryptedValue = &encryptedValue
-			return nil
-		}
+	// Check for string value
+	if stringVal, ok := obj["string"].(string); ok {
+		e.StringValue = &stringVal
 	}
 
-	// Check if it's a plain value object
+	// Check for encrypted values
+	if encryptionKey, ok := obj["encryptionKey"].(string); ok {
+		e.EncryptionKey = &encryptionKey
+	}
+	if encryptedValue, ok := obj["encryptedValue"].(string); ok {
+		e.EncryptedValue = &encryptedValue
+	}
+
+	// Check for plain value
 	if plainValue, ok := obj["plainValue"].(string); ok {
 		e.PlainValue = &plainValue
-		return nil
 	}
 
-	return fmt.Errorf("invalid environment variable value format")
+	// If no fields were found, this might be an invalid format
+	if e.StringValue == nil && e.EncryptionKey == nil && e.EncryptedValue == nil && e.PlainValue == nil {
+		return fmt.Errorf("invalid environment variable value format")
+	}
+
+	return nil
 }
 
 // MarshalJSON custom marshaling for EnvVariableValue
 func (e EnvVariableValue) MarshalJSON() ([]byte, error) {
-	if e.StringValue != nil {
+	// If only string value is present, marshal as string
+	if e.StringValue != nil && e.EncryptionKey == nil && e.EncryptedValue == nil && e.PlainValue == nil {
 		return json.Marshal(*e.StringValue)
 	}
 
-	if e.EncryptionKey != nil && e.EncryptedValue != nil {
+	// If only encrypted values are present, marshal as encrypted object
+	if e.StringValue == nil && e.EncryptionKey != nil && e.EncryptedValue != nil && e.PlainValue == nil {
 		return json.Marshal(map[string]string{
 			"encryptionKey":  *e.EncryptionKey,
 			"encryptedValue": *e.EncryptedValue,
 		})
 	}
 
-	if e.PlainValue != nil {
+	// If only plain value is present, marshal as plain object
+	if e.StringValue == nil && e.EncryptionKey == nil && e.EncryptedValue == nil && e.PlainValue != nil {
 		return json.Marshal(map[string]string{
 			"plainValue": *e.PlainValue,
 		})
 	}
 
-	return json.Marshal(nil)
+	// If multiple values are present, create a combined object
+	// This is a more complex case that might need API-specific handling
+	combined := make(map[string]interface{})
+
+	if e.StringValue != nil {
+		combined["string"] = *e.StringValue
+	}
+
+	if e.EncryptionKey != nil && e.EncryptedValue != nil {
+		combined["encryptionKey"] = *e.EncryptionKey
+		combined["encryptedValue"] = *e.EncryptedValue
+	}
+
+	if e.PlainValue != nil {
+		combined["plainValue"] = *e.PlainValue
+	}
+
+	return json.Marshal(combined)
 }
 
 // EnvVariableTerraformValue represents a Terraform environment variable value
@@ -101,53 +128,64 @@ type EnvVariableTerraformValue struct {
 
 // ToEnvVariableValue converts Terraform value to API value
 func (e EnvVariableTerraformValue) ToEnvVariableValue() EnvVariableValue {
+	result := EnvVariableValue{}
+
+	// Set string value if present
 	if !e.StringValue.IsNull() && !e.StringValue.IsUnknown() {
 		val := e.StringValue.ValueString()
-		return EnvVariableValue{StringValue: &val}
+		result.StringValue = &val
 	}
 
+	// Set encrypted value if both key and value are present
 	if !e.EncryptionKey.IsNull() && !e.EncryptionKey.IsUnknown() &&
 		!e.EncryptedValue.IsNull() && !e.EncryptedValue.IsUnknown() {
 		key := e.EncryptionKey.ValueString()
 		val := e.EncryptedValue.ValueString()
-		return EnvVariableValue{
-			EncryptionKey:  &key,
-			EncryptedValue: &val,
-		}
+		result.EncryptionKey = &key
+		result.EncryptedValue = &val
 	}
 
+	// Set plain value if present
 	if !e.PlainValue.IsNull() && !e.PlainValue.IsUnknown() {
 		val := e.PlainValue.ValueString()
-		return EnvVariableValue{PlainValue: &val}
+		result.PlainValue = &val
 	}
 
-	// Default to empty string value
-	empty := ""
-	return EnvVariableValue{StringValue: &empty}
+	return result
 }
 
 // FromEnvVariableValue converts API value to Terraform value
 func FromEnvVariableValue(apiValue EnvVariableValue) EnvVariableTerraformValue {
+	result := EnvVariableTerraformValue{}
+
+	// Set string value if present
 	if apiValue.StringValue != nil {
-		return EnvVariableTerraformValue{
-			StringValue: types.StringValue(*apiValue.StringValue),
-		}
+		result.StringValue = types.StringValue(*apiValue.StringValue)
+	} else {
+		result.StringValue = types.StringNull()
 	}
 
-	if apiValue.EncryptionKey != nil && apiValue.EncryptedValue != nil {
-		return EnvVariableTerraformValue{
-			EncryptionKey:  types.StringValue(*apiValue.EncryptionKey),
-			EncryptedValue: types.StringValue(*apiValue.EncryptedValue),
-		}
+	// Set encrypted value fields if present
+	if apiValue.EncryptionKey != nil {
+		result.EncryptionKey = types.StringValue(*apiValue.EncryptionKey)
+	} else {
+		result.EncryptionKey = types.StringNull()
 	}
 
+	if apiValue.EncryptedValue != nil {
+		result.EncryptedValue = types.StringValue(*apiValue.EncryptedValue)
+	} else {
+		result.EncryptedValue = types.StringNull()
+	}
+
+	// Set plain value if present
 	if apiValue.PlainValue != nil {
-		return EnvVariableTerraformValue{
-			PlainValue: types.StringValue(*apiValue.PlainValue),
-		}
+		result.PlainValue = types.StringValue(*apiValue.PlainValue)
+	} else {
+		result.PlainValue = types.StringNull()
 	}
 
-	return EnvVariableTerraformValue{}
+	return result
 }
 
 var (
@@ -231,15 +269,8 @@ func (d *containersJobResource) Schema(_ context.Context, _ resource.SchemaReque
 				Optional: true,
 			},
 			"env_variables": schema.MapAttribute{
-				Optional: true,
-				ElementType: types.ObjectType{
-					AttrTypes: map[string]attr.Type{
-						"string_value":    types.StringType,
-						"encryption_key":  types.StringType,
-						"encrypted_value": types.StringType,
-						"plain_value":     types.StringType,
-					},
-				},
+				Optional:    true,
+				ElementType: types.StringType,
 				Description: "Environment variables to pass to the container. Each variable can be a string value, encrypted value, or plain value for server-side encryption.",
 			},
 		},
@@ -266,7 +297,8 @@ func (d *containersJobResource) Create(ctx context.Context, req resource.CreateR
 
 	// Handle environment variables
 	if !plan.EnvVariables.IsNull() && !plan.EnvVariables.IsUnknown() {
-		var envVars map[string]EnvVariableTerraformValue
+		// Convert Terraform map to EnvVariableValue map
+		var envVars map[string]types.String
 		diags = plan.EnvVariables.ElementsAs(ctx, &envVars, false)
 		resp.Diagnostics.Append(diags...)
 		if resp.Diagnostics.HasError() {
@@ -276,7 +308,10 @@ func (d *containersJobResource) Create(ctx context.Context, req resource.CreateR
 		// Convert to EnvVariableValue map
 		envVarValues := make(map[string]EnvVariableValue)
 		for key, envVar := range envVars {
-			envVarValues[key] = envVar.ToEnvVariableValue()
+			if !envVar.IsNull() && !envVar.IsUnknown() {
+				val := envVar.ValueString()
+				envVarValues[key] = EnvVariableValue{StringValue: &val}
+			}
 		}
 		createJob.EnvVariables = envVarValues
 	}
@@ -344,19 +379,31 @@ func (d *containersJobResource) Create(ctx context.Context, req resource.CreateR
 	// Handle environment variables in response
 	if jobResponse.EnvVariables != nil {
 		// Convert from EnvVariableValue map to Terraform map
-		envVarObjects := make(map[string]EnvVariableTerraformValue)
+		envVarStrings := make(map[string]types.String)
 		for key, envVar := range jobResponse.EnvVariables {
-			envVarObjects[key] = FromEnvVariableValue(envVar)
+			// Convert to string representation
+			if envVar.StringValue != nil {
+				envVarStrings[key] = types.StringValue(*envVar.StringValue)
+			} else if envVar.EncryptionKey != nil && envVar.EncryptedValue != nil {
+				// For encrypted values, create a JSON string representation
+				jsonBytes, _ := json.Marshal(map[string]string{
+					"encryptionKey":  *envVar.EncryptionKey,
+					"encryptedValue": *envVar.EncryptedValue,
+				})
+				envVarStrings[key] = types.StringValue(string(jsonBytes))
+			} else if envVar.PlainValue != nil {
+				// For plain values, create a JSON string representation
+				jsonBytes, _ := json.Marshal(map[string]string{
+					"plainValue": *envVar.PlainValue,
+				})
+				envVarStrings[key] = types.StringValue(string(jsonBytes))
+			} else {
+				// Fallback to empty string
+				envVarStrings[key] = types.StringValue("")
+			}
 		}
 
-		envVars, diags := types.MapValueFrom(ctx, types.ObjectType{
-			AttrTypes: map[string]attr.Type{
-				"string_value":    types.StringType,
-				"encryption_key":  types.StringType,
-				"encrypted_value": types.StringType,
-				"plain_value":     types.StringType,
-			},
-		}, envVarObjects)
+		envVars, diags := types.MapValueFrom(ctx, types.StringType, envVarStrings)
 		resp.Diagnostics.Append(diags...)
 		if resp.Diagnostics.HasError() {
 			return
@@ -364,14 +411,7 @@ func (d *containersJobResource) Create(ctx context.Context, req resource.CreateR
 		plan.EnvVariables = envVars
 	} else {
 		// Set to null if not provided in response
-		plan.EnvVariables = types.MapNull(types.ObjectType{
-			AttrTypes: map[string]attr.Type{
-				"string_value":    types.StringType,
-				"encryption_key":  types.StringType,
-				"encrypted_value": types.StringType,
-				"plain_value":     types.StringType,
-			},
-		})
+		plan.EnvVariables = types.MapNull(types.StringType)
 	}
 
 	diags = resp.State.Set(ctx, plan)
@@ -440,19 +480,31 @@ func (d *containersJobResource) Read(ctx context.Context, req resource.ReadReque
 	// Handle environment variables in response
 	if jobResponse.EnvVariables != nil {
 		// Convert from EnvVariableValue map to Terraform map
-		envVarObjects := make(map[string]EnvVariableTerraformValue)
+		envVarStrings := make(map[string]types.String)
 		for key, envVar := range jobResponse.EnvVariables {
-			envVarObjects[key] = FromEnvVariableValue(envVar)
+			// Convert to string representation
+			if envVar.StringValue != nil {
+				envVarStrings[key] = types.StringValue(*envVar.StringValue)
+			} else if envVar.EncryptionKey != nil && envVar.EncryptedValue != nil {
+				// For encrypted values, create a JSON string representation
+				jsonBytes, _ := json.Marshal(map[string]string{
+					"encryptionKey":  *envVar.EncryptionKey,
+					"encryptedValue": *envVar.EncryptedValue,
+				})
+				envVarStrings[key] = types.StringValue(string(jsonBytes))
+			} else if envVar.PlainValue != nil {
+				// For plain values, create a JSON string representation
+				jsonBytes, _ := json.Marshal(map[string]string{
+					"plainValue": *envVar.PlainValue,
+				})
+				envVarStrings[key] = types.StringValue(string(jsonBytes))
+			} else {
+				// Fallback to empty string
+				envVarStrings[key] = types.StringValue("")
+			}
 		}
 
-		envVars, diags := types.MapValueFrom(ctx, types.ObjectType{
-			AttrTypes: map[string]attr.Type{
-				"string_value":    types.StringType,
-				"encryption_key":  types.StringType,
-				"encrypted_value": types.StringType,
-				"plain_value":     types.StringType,
-			},
-		}, envVarObjects)
+		envVars, diags := types.MapValueFrom(ctx, types.StringType, envVarStrings)
 		resp.Diagnostics.Append(diags...)
 		if resp.Diagnostics.HasError() {
 			return
@@ -460,14 +512,7 @@ func (d *containersJobResource) Read(ctx context.Context, req resource.ReadReque
 		result.EnvVariables = envVars
 	} else {
 		// Set to null if not provided in response
-		result.EnvVariables = types.MapNull(types.ObjectType{
-			AttrTypes: map[string]attr.Type{
-				"string_value":    types.StringType,
-				"encryption_key":  types.StringType,
-				"encrypted_value": types.StringType,
-				"plain_value":     types.StringType,
-			},
-		})
+		result.EnvVariables = types.MapNull(types.StringType)
 	}
 
 	diags = resp.State.Set(ctx, &result)
@@ -494,7 +539,8 @@ func (d *containersJobResource) Update(ctx context.Context, req resource.UpdateR
 
 	// Handle environment variables
 	if !plan.EnvVariables.IsNull() && !plan.EnvVariables.IsUnknown() {
-		var envVars map[string]EnvVariableTerraformValue
+		// Convert Terraform map to EnvVariableValue map
+		var envVars map[string]types.String
 		diags = plan.EnvVariables.ElementsAs(ctx, &envVars, false)
 		resp.Diagnostics.Append(diags...)
 		if resp.Diagnostics.HasError() {
@@ -504,7 +550,10 @@ func (d *containersJobResource) Update(ctx context.Context, req resource.UpdateR
 		// Convert to EnvVariableValue map
 		envVarValues := make(map[string]EnvVariableValue)
 		for key, envVar := range envVars {
-			envVarValues[key] = envVar.ToEnvVariableValue()
+			if !envVar.IsNull() && !envVar.IsUnknown() {
+				val := envVar.ValueString()
+				envVarValues[key] = EnvVariableValue{StringValue: &val}
+			}
 		}
 		updateJob.EnvVariables = envVarValues
 	}
@@ -573,19 +622,31 @@ func (d *containersJobResource) Update(ctx context.Context, req resource.UpdateR
 	// Handle environment variables in response
 	if jobResponse.EnvVariables != nil {
 		// Convert from EnvVariableValue map to Terraform map
-		envVarObjects := make(map[string]EnvVariableTerraformValue)
+		envVarStrings := make(map[string]types.String)
 		for key, envVar := range jobResponse.EnvVariables {
-			envVarObjects[key] = FromEnvVariableValue(envVar)
+			// Convert to string representation
+			if envVar.StringValue != nil {
+				envVarStrings[key] = types.StringValue(*envVar.StringValue)
+			} else if envVar.EncryptionKey != nil && envVar.EncryptedValue != nil {
+				// For encrypted values, create a JSON string representation
+				jsonBytes, _ := json.Marshal(map[string]string{
+					"encryptionKey":  *envVar.EncryptionKey,
+					"encryptedValue": *envVar.EncryptedValue,
+				})
+				envVarStrings[key] = types.StringValue(string(jsonBytes))
+			} else if envVar.PlainValue != nil {
+				// For plain values, create a JSON string representation
+				jsonBytes, _ := json.Marshal(map[string]string{
+					"plainValue": *envVar.PlainValue,
+				})
+				envVarStrings[key] = types.StringValue(string(jsonBytes))
+			} else {
+				// Fallback to empty string
+				envVarStrings[key] = types.StringValue("")
+			}
 		}
 
-		envVars, diags := types.MapValueFrom(ctx, types.ObjectType{
-			AttrTypes: map[string]attr.Type{
-				"string_value":    types.StringType,
-				"encryption_key":  types.StringType,
-				"encrypted_value": types.StringType,
-				"plain_value":     types.StringType,
-			},
-		}, envVarObjects)
+		envVars, diags := types.MapValueFrom(ctx, types.StringType, envVarStrings)
 		resp.Diagnostics.Append(diags...)
 		if resp.Diagnostics.HasError() {
 			return
@@ -593,14 +654,7 @@ func (d *containersJobResource) Update(ctx context.Context, req resource.UpdateR
 		plan.EnvVariables = envVars
 	} else {
 		// Set to null if not provided in response
-		plan.EnvVariables = types.MapNull(types.ObjectType{
-			AttrTypes: map[string]attr.Type{
-				"string_value":    types.StringType,
-				"encryption_key":  types.StringType,
-				"encrypted_value": types.StringType,
-				"plain_value":     types.StringType,
-			},
-		})
+		plan.EnvVariables = types.MapNull(types.StringType)
 	}
 
 	diags = resp.State.Set(ctx, plan)

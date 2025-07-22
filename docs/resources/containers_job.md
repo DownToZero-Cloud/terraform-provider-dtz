@@ -93,23 +93,11 @@ resource "dtz_containers_job" "advanced_job" {
 }
 ```
 
-## Environment Variables
+### Environment Variables
 
-The `env_variables` field supports environment variables for your container job. The provider supports three types of environment variable values:
+Environment variables can be passed to the container. The provider supports simple string values and JSON-encoded complex values.
 
-```terraform
-env_variables = {
-  PORT        = "8080"
-  DATABASE_URL = "postgres://localhost:5432/mydb"
-  API_KEY     = var.api_key
-}
-```
-
-### Environment Variable Types
-
-The provider supports three types of environment variable values:
-
-#### 1. String Values
+#### Simple String Values
 ```terraform
 env_variables = {
   PORT = "8080"
@@ -117,55 +105,38 @@ env_variables = {
 }
 ```
 
-#### 2. Encrypted Values
+#### Complex Values (JSON-encoded)
+For encrypted or plain values, use JSON strings:
+
 ```terraform
 env_variables = {
-  SECRET_KEY = {
-    encryption_key = "AES256:KEY1"
-    encrypted_value = "base64-encoded-ciphertext"
-  }
-}
-```
-
-#### 3. Plain Values for Server-Side Encryption
-```terraform
-env_variables = {
-  PASSWORD = {
-    plain_value = "my-secret-password"  # Server will encrypt this
-  }
-}
-```
-
-### Mixed Environment Variable Types
-
-You can mix different types of environment variables in a single resource:
-
-```terraform
-resource "dtz_containers_job" "advanced_job" {
-  name = "advanced-job"
-  container_image = "my-app:latest"
-  schedule_type = "precise"
-  schedule_cron = "0 2 * * *" # Daily at 2 AM
+  # Encrypted value
+  SECRET_KEY = jsonencode({
+    encryptionKey  = "AES256:KEY1"
+    encryptedValue = "base64-encoded-ciphertext"
+  })
   
-  env_variables = {
-    # Simple string values
-    PORT        = "8080"
-    ENVIRONMENT = "production"
-    
-    # Pre-encrypted secrets
-    API_SECRET = {
-      encryption_key = "AES256:PROD_KEY"
-      encrypted_value = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
-    }
-    
-    # Plain values for server-side encryption
-    DB_PASSWORD = {
-      plain_value = "super-secret-db-password"
-    }
-    
-    # Database connection (string)
-    DATABASE_URL = "postgres://user:pass@localhost:5432/mydb"
-  }
+  # Plain value for server-side encryption
+  PASSWORD = jsonencode({
+    plainValue = "my-secret-password"
+  })
+}
+```
+
+#### Mixed Usage
+You can combine simple strings and complex values:
+
+```terraform
+env_variables = {
+  PORT        = "8080"
+  ENV         = "production"
+  SECRET_KEY  = jsonencode({
+    encryptionKey  = "AES256:KEY1"
+    encryptedValue = "base64-encoded-ciphertext"
+  })
+  PASSWORD    = jsonencode({
+    plainValue = "my-secret-password"
+  })
 }
 ```
 
@@ -181,30 +152,17 @@ The current provider implementation handles these transformations automatically,
 
 ### Technical Implementation Details
 
-The provider internally uses a custom `EnvVariableValue` type that supports all three value types:
-
-```go
-type EnvVariableValue struct {
-    // For string values (#0)
-    StringValue *string `json:"string,omitempty"`
-    
-    // For encrypted values (#1)
-    EncryptionKey *string `json:"encryptionKey,omitempty"`
-    EncryptedValue *string `json:"encryptedValue,omitempty"`
-    
-    // For plain values (#2)
-    PlainValue *string `json:"plainValue,omitempty"`
-}
-```
+The provider uses a simplified approach for environment variables:
 
 **Current Behavior:**
-- Terraform users can provide string values, encrypted values, or plain values
-- Provider converts Terraform objects to `EnvVariableValue` with appropriate fields set
+- Terraform users provide simple string values or JSON-encoded complex values
+- Provider converts all values to `EnvVariableValue` with appropriate fields set
 - API receives the correct format for each value type
-- Provider converts API responses back to Terraform objects with proper field mapping
+- Provider converts API responses back to string representations
 
 **Implementation Features:**
-- Full support for mixed environment variable types in a single resource
+- Support for simple string environment variables
+- Support for JSON-encoded encrypted and plain values
 - Automatic marshaling/unmarshaling between Terraform and API formats
 - Proper handling of API transformation rules
 - Type-safe conversion between different value types
@@ -246,7 +204,7 @@ When the API receives environment variables, it expects the following JSON struc
 }
 ```
 
-The provider's `EnvVariableValue` type handles marshaling and unmarshaling between these JSON formats automatically.
+The provider automatically handles the conversion between Terraform's string representation and the API's expected JSON structure.
 
 ## Schedule Types
 

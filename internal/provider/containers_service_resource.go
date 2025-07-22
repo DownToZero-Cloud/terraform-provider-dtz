@@ -8,11 +8,11 @@ import (
 	"net/http"
 	"strings"
 
-	"github.com/hashicorp/terraform-plugin-framework/attr"
+	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
+	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
-	"github.com/hashicorp/terraform-plugin-framework/types/basetypes"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 )
 
@@ -24,38 +24,46 @@ func newContainersServiceResource() resource.Resource {
 	return &containersServiceResource{}
 }
 
+// LoginModel represents the login block
+type LoginModel struct {
+	ProviderName types.String `tfsdk:"provider_name"`
+}
+
 type containersServiceResource struct {
-	Id                types.String `tfsdk:"id"`
-	Prefix            types.String `tfsdk:"prefix"`
-	ContainerImage    types.String `tfsdk:"container_image"`
-	ContainerPullUser types.String `tfsdk:"container_pull_user"`
-	ContainerPullPwd  types.String `tfsdk:"container_pull_pwd"`
-	EnvVariables      types.Map    `tfsdk:"env_variables"`
-	Login             types.Object `tfsdk:"login"`
-	api_key           string
+	Id                    types.String `tfsdk:"id"`
+	Prefix                types.String `tfsdk:"prefix"`
+	ContainerImage        types.String `tfsdk:"container_image"`
+	ContainerImageVersion types.String `tfsdk:"container_image_version"`
+	ContainerPullUser     types.String `tfsdk:"container_pull_user"`
+	ContainerPullPwd      types.String `tfsdk:"container_pull_pwd"`
+	EnvVariables          types.Map    `tfsdk:"env_variables"`
+	Login                 *LoginModel  `tfsdk:"login"`
+	api_key               string
 }
 
 type containersServiceResponse struct {
-	ContextId         string            `json:"contextId"`
-	ServiceId         string            `json:"serviceId"`
-	Created           string            `json:"created"`
-	Prefix            string            `json:"prefix"`
-	ContainerImage    string            `json:"containerImage"`
-	ContainerPullUser *string           `json:"containerPullUser"`
-	ContainerPullPwd  *string           `json:"containerPullPwd"`
-	EnvVariables      map[string]string `json:"envVariables"`
-	Login             *struct {
+	ContextId             string            `json:"contextId"`
+	ServiceId             string            `json:"serviceId"`
+	Created               string            `json:"created"`
+	Prefix                string            `json:"prefix"`
+	ContainerImage        string            `json:"containerImage"`
+	ContainerImageVersion *string           `json:"containerImageVersion"`
+	ContainerPullUser     *string           `json:"containerPullUser"`
+	ContainerPullPwd      *string           `json:"containerPullPwd"`
+	EnvVariables          map[string]string `json:"envVariables"`
+	Login                 *struct {
 		ProviderName string `json:"providerName"`
 	} `json:"login"`
 }
 
 type createServiceRequest struct {
-	Prefix            string            `json:"prefix"`
-	ContainerImage    string            `json:"containerImage"`
-	ContainerPullUser string            `json:"containerPullUser,omitempty"`
-	ContainerPullPwd  string            `json:"containerPullPwd,omitempty"`
-	EnvVariables      map[string]string `json:"envVariables,omitempty"`
-	Login             *struct {
+	Prefix                string            `json:"prefix"`
+	ContainerImage        string            `json:"containerImage"`
+	ContainerImageVersion string            `json:"containerImageVersion,omitempty"`
+	ContainerPullUser     string            `json:"containerPullUser,omitempty"`
+	ContainerPullPwd      string            `json:"containerPullPwd,omitempty"`
+	EnvVariables          map[string]string `json:"envVariables,omitempty"`
+	Login                 *struct {
 		ProviderName string `json:"providerName"`
 	} `json:"login,omitempty"`
 }
@@ -76,6 +84,10 @@ func (d *containersServiceResource) Schema(_ context.Context, _ resource.SchemaR
 			"container_image": schema.StringAttribute{
 				Required: true,
 			},
+			"container_image_version": schema.StringAttribute{
+				Optional:           true,
+				DeprecationMessage: "This field is deprecated. Include the tag or digest directly in the container_image field instead.",
+			},
 			"container_pull_user": schema.StringAttribute{
 				Optional: true,
 			},
@@ -92,6 +104,10 @@ func (d *containersServiceResource) Schema(_ context.Context, _ resource.SchemaR
 				Attributes: map[string]schema.Attribute{
 					"provider_name": schema.StringAttribute{
 						Required: true,
+						Validators: []validator.String{
+							stringvalidator.OneOf("dtz"),
+						},
+						Description: "The login provider name. Only 'dtz' is currently supported.",
 					},
 				},
 			},
@@ -108,10 +124,11 @@ func (d *containersServiceResource) Create(ctx context.Context, req resource.Cre
 	}
 
 	createService := createServiceRequest{
-		Prefix:            plan.Prefix.ValueString(),
-		ContainerImage:    plan.ContainerImage.ValueString(),
-		ContainerPullUser: plan.ContainerPullUser.ValueString(),
-		ContainerPullPwd:  plan.ContainerPullPwd.ValueString(),
+		Prefix:                plan.Prefix.ValueString(),
+		ContainerImage:        normalizeContainerImage(plan.ContainerImage.ValueString()),
+		ContainerImageVersion: plan.ContainerImageVersion.ValueString(),
+		ContainerPullUser:     plan.ContainerPullUser.ValueString(),
+		ContainerPullPwd:      plan.ContainerPullPwd.ValueString(),
 	}
 
 	if !plan.EnvVariables.IsNull() {
@@ -124,19 +141,23 @@ func (d *containersServiceResource) Create(ctx context.Context, req resource.Cre
 		createService.EnvVariables = envVars
 	}
 
-	if !plan.Login.IsNull() {
-		var login struct {
-			ProviderName string `tfsdk:"provider_name"`
-		}
-		diags = plan.Login.As(ctx, &login, basetypes.ObjectAsOptions{})
-		resp.Diagnostics.Append(diags...)
-		if resp.Diagnostics.HasError() {
+	if plan.Login != nil {
+		// Login block is provided, so provider_name must be set and valid
+		if plan.Login.ProviderName.IsNull() || plan.Login.ProviderName.IsUnknown() {
+			resp.Diagnostics.AddError("Validation Error", "provider_name is required when login block is provided")
 			return
 		}
+
+		providerName := plan.Login.ProviderName.ValueString()
+		if providerName != "dtz" {
+			resp.Diagnostics.AddError("Validation Error", "provider_name must be 'dtz' (only supported provider)")
+			return
+		}
+
 		createService.Login = &struct {
 			ProviderName string `json:"providerName"`
 		}{
-			ProviderName: login.ProviderName,
+			ProviderName: providerName,
 		}
 	}
 
@@ -168,7 +189,7 @@ func (d *containersServiceResource) Create(ctx context.Context, req resource.Cre
 		resp.Diagnostics.AddError("Client Error", fmt.Sprintf("Unable to create service, got error: %s", err))
 		return
 	}
-	defer deferredCloseResponseBody(ctx, res.Body)
+	defer deferredCloseResponseBody(ctx, res.Body)()
 
 	resp_body, err := io.ReadAll(res.Body)
 	if err != nil {
@@ -188,6 +209,7 @@ func (d *containersServiceResource) Create(ctx context.Context, req resource.Cre
 	plan.Id = types.StringValue(serviceResponse.ServiceId)
 	plan.Prefix = types.StringValue(serviceResponse.Prefix)
 	plan.ContainerImage = types.StringValue(serviceResponse.ContainerImage)
+	plan.ContainerImageVersion = types.StringPointerValue(serviceResponse.ContainerImageVersion)
 	plan.ContainerPullUser = types.StringPointerValue(serviceResponse.ContainerPullUser)
 	plan.ContainerPullPwd = types.StringPointerValue(serviceResponse.ContainerPullPwd)
 
@@ -199,16 +221,11 @@ func (d *containersServiceResource) Create(ctx context.Context, req resource.Cre
 	plan.EnvVariables = envVars
 
 	if serviceResponse.Login != nil {
-		login, diags := types.ObjectValueFrom(ctx, map[string]attr.Type{
-			"provider_name": types.StringType,
-		}, map[string]attr.Value{
-			"provider_name": types.StringValue(serviceResponse.Login.ProviderName),
-		})
-		resp.Diagnostics.Append(diags...)
-		if resp.Diagnostics.HasError() {
-			return
+		plan.Login = &LoginModel{
+			ProviderName: types.StringValue(serviceResponse.Login.ProviderName),
 		}
-		plan.Login = login
+	} else {
+		plan.Login = nil
 	}
 
 	diags = resp.State.Set(ctx, plan)
@@ -242,7 +259,7 @@ func (d *containersServiceResource) Read(ctx context.Context, req resource.ReadR
 		resp.Diagnostics.AddError("Client Error", fmt.Sprintf("Unable to read service, got error: %s", err))
 		return
 	}
-	defer deferredCloseResponseBody(ctx, response.Body)
+	defer deferredCloseResponseBody(ctx, response.Body)()
 
 	body, err := io.ReadAll(response.Body)
 	if err != nil {
@@ -266,6 +283,7 @@ func (d *containersServiceResource) Read(ctx context.Context, req resource.ReadR
 	state.Id = types.StringValue(serviceResponse.ServiceId)
 	state.Prefix = types.StringValue(serviceResponse.Prefix)
 	state.ContainerImage = types.StringValue(serviceResponse.ContainerImage)
+	state.ContainerImageVersion = types.StringPointerValue(serviceResponse.ContainerImageVersion)
 	state.ContainerPullUser = types.StringPointerValue(serviceResponse.ContainerPullUser)
 	state.ContainerPullPwd = types.StringPointerValue(serviceResponse.ContainerPullPwd)
 
@@ -277,16 +295,11 @@ func (d *containersServiceResource) Read(ctx context.Context, req resource.ReadR
 	state.EnvVariables = envVars
 
 	if serviceResponse.Login != nil {
-		login, diags := types.ObjectValueFrom(ctx, map[string]attr.Type{
-			"provider_name": types.StringType,
-		}, map[string]attr.Value{
-			"provider_name": types.StringValue(serviceResponse.Login.ProviderName),
-		})
-		resp.Diagnostics.Append(diags...)
-		if resp.Diagnostics.HasError() {
-			return
+		state.Login = &LoginModel{
+			ProviderName: types.StringValue(serviceResponse.Login.ProviderName),
 		}
-		state.Login = login
+	} else {
+		state.Login = nil
 	}
 
 	diags = resp.State.Set(ctx, &state)
@@ -301,11 +314,30 @@ func (d *containersServiceResource) Update(ctx context.Context, req resource.Upd
 		return
 	}
 
+	var state containersServiceResource
+	diags = req.State.Get(ctx, &state)
+	resp.Diagnostics.Append(diags...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	// Check if trying to remove login block (not supported by API)
+	if state.Login != nil && plan.Login == nil {
+		resp.Diagnostics.AddError(
+			"Unsupported Operation",
+			"Cannot remove authentication from an existing service. The API does not support removing the login block from an existing service. Please either:\n"+
+				"1. Keep the login block in your configuration, or\n"+
+				"2. Delete and recreate the service without authentication.",
+		)
+		return
+	}
+
 	updateService := createServiceRequest{
-		Prefix:            plan.Prefix.ValueString(),
-		ContainerImage:    plan.ContainerImage.ValueString(),
-		ContainerPullUser: plan.ContainerPullUser.ValueString(),
-		ContainerPullPwd:  plan.ContainerPullPwd.ValueString(),
+		Prefix:                plan.Prefix.ValueString(),
+		ContainerImage:        normalizeContainerImage(plan.ContainerImage.ValueString()),
+		ContainerImageVersion: plan.ContainerImageVersion.ValueString(),
+		ContainerPullUser:     plan.ContainerPullUser.ValueString(),
+		ContainerPullPwd:      plan.ContainerPullPwd.ValueString(),
 	}
 
 	if !plan.EnvVariables.IsNull() {
@@ -318,19 +350,23 @@ func (d *containersServiceResource) Update(ctx context.Context, req resource.Upd
 		updateService.EnvVariables = envVars
 	}
 
-	if !plan.Login.IsNull() {
-		var login struct {
-			ProviderName string `tfsdk:"provider_name"`
-		}
-		diags = plan.Login.As(ctx, &login, basetypes.ObjectAsOptions{})
-		resp.Diagnostics.Append(diags...)
-		if resp.Diagnostics.HasError() {
+	if plan.Login != nil {
+		// Login block is provided, so provider_name must be set and valid
+		if plan.Login.ProviderName.IsNull() || plan.Login.ProviderName.IsUnknown() {
+			resp.Diagnostics.AddError("Validation Error", "provider_name is required when login block is provided")
 			return
 		}
+
+		providerName := plan.Login.ProviderName.ValueString()
+		if providerName != "dtz" {
+			resp.Diagnostics.AddError("Validation Error", "provider_name must be 'dtz' (only supported provider)")
+			return
+		}
+
 		updateService.Login = &struct {
 			ProviderName string `json:"providerName"`
 		}{
-			ProviderName: login.ProviderName,
+			ProviderName: providerName,
 		}
 	}
 
@@ -362,7 +398,7 @@ func (d *containersServiceResource) Update(ctx context.Context, req resource.Upd
 		resp.Diagnostics.AddError("Client Error", fmt.Sprintf("Unable to update service, got error: %s", err))
 		return
 	}
-	defer deferredCloseResponseBody(ctx, res.Body)
+	defer deferredCloseResponseBody(ctx, res.Body)()
 
 	if res.StatusCode != http.StatusOK {
 		resp.Diagnostics.AddError("API Error", fmt.Sprintf("Unable to update service, status code: %d", res.StatusCode))
@@ -379,6 +415,7 @@ func (d *containersServiceResource) Update(ctx context.Context, req resource.Upd
 	plan.Id = types.StringValue(serviceResponse.ServiceId)
 	plan.Prefix = types.StringValue(serviceResponse.Prefix)
 	plan.ContainerImage = types.StringValue(serviceResponse.ContainerImage)
+	plan.ContainerImageVersion = types.StringPointerValue(serviceResponse.ContainerImageVersion)
 	plan.ContainerPullUser = types.StringPointerValue(serviceResponse.ContainerPullUser)
 	plan.ContainerPullPwd = types.StringPointerValue(serviceResponse.ContainerPullPwd)
 
@@ -390,16 +427,11 @@ func (d *containersServiceResource) Update(ctx context.Context, req resource.Upd
 	plan.EnvVariables = envVars
 
 	if serviceResponse.Login != nil {
-		login, diags := types.ObjectValueFrom(ctx, map[string]attr.Type{
-			"provider_name": types.StringType,
-		}, map[string]attr.Value{
-			"provider_name": types.StringValue(serviceResponse.Login.ProviderName),
-		})
-		resp.Diagnostics.Append(diags...)
-		if resp.Diagnostics.HasError() {
-			return
+		plan.Login = &LoginModel{
+			ProviderName: types.StringValue(serviceResponse.Login.ProviderName),
 		}
-		plan.Login = login
+	} else {
+		plan.Login = nil
 	}
 
 	diags = resp.State.Set(ctx, plan)
@@ -433,7 +465,7 @@ func (d *containersServiceResource) Delete(ctx context.Context, req resource.Del
 		resp.Diagnostics.AddError("Client Error", fmt.Sprintf("Unable to delete service, got error: %s", err))
 		return
 	}
-	defer deferredCloseResponseBody(ctx, response.Body)
+	defer deferredCloseResponseBody(ctx, response.Body)()
 
 	if response.StatusCode == http.StatusNotFound {
 		return

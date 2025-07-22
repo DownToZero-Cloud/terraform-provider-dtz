@@ -179,7 +179,7 @@ func TestContainersServiceResource_Configure(t *testing.T) {
 			}
 
 			// Test with valid provider data
-			if dtz, ok := tt.providerData.(*dtzProvider); ok {
+			if dtz, ok := tt.providerData.(dtzProvider); ok {
 				resource.api_key = dtz.ApiKey
 				if resource.api_key != "test-api-key" {
 					t.Errorf("Expected api_key to be 'test-api-key', got %s", resource.api_key)

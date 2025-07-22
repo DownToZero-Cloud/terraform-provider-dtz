@@ -205,9 +205,13 @@ func TestContainersJobResource_RequestResponseStructures(t *testing.T) {
 		ScheduleType:      "relaxed",
 		ScheduleCron:      "0 0 * * *",
 		ScheduleRepeat:    "",
-		EnvVariables: map[string]string{
-			"PORT": "8080",
-			"ENV":  "test",
+		EnvVariables: map[string]EnvVariableValue{
+			"PORT": {
+				StringValue: stringPtr("8080"),
+			},
+			"ENV": {
+				StringValue: stringPtr("test"),
+			},
 		},
 	}
 
@@ -269,13 +273,55 @@ func TestContainersJobResource_RequestResponseStructures(t *testing.T) {
 	}
 }
 
+// Helper function to create string pointers
+func stringPtr(s string) *string {
+	return &s
+}
+
 // Test environment variables handling
 func TestContainersJobResource_EnvironmentVariables(t *testing.T) {
 	// Test creating a resource with environment variables
-	envVars := types.MapValueMust(types.StringType, map[string]attr.Value{
-		"PORT":   types.StringValue("8080"),
-		"ENV":    types.StringValue("test"),
-		"DB_URL": types.StringValue("postgres://localhost:5432/mydb"),
+	envVars := types.MapValueMust(types.ObjectType{
+		AttrTypes: map[string]attr.Type{
+			"string_value":    types.StringType,
+			"encryption_key":  types.StringType,
+			"encrypted_value": types.StringType,
+			"plain_value":     types.StringType,
+		},
+	}, map[string]attr.Value{
+		"PORT": types.ObjectValueMust(map[string]attr.Type{
+			"string_value":    types.StringType,
+			"encryption_key":  types.StringType,
+			"encrypted_value": types.StringType,
+			"plain_value":     types.StringType,
+		}, map[string]attr.Value{
+			"string_value":    types.StringValue("8080"),
+			"encryption_key":  types.StringNull(),
+			"encrypted_value": types.StringNull(),
+			"plain_value":     types.StringNull(),
+		}),
+		"ENV": types.ObjectValueMust(map[string]attr.Type{
+			"string_value":    types.StringType,
+			"encryption_key":  types.StringType,
+			"encrypted_value": types.StringType,
+			"plain_value":     types.StringType,
+		}, map[string]attr.Value{
+			"string_value":    types.StringValue("test"),
+			"encryption_key":  types.StringNull(),
+			"encrypted_value": types.StringNull(),
+			"plain_value":     types.StringNull(),
+		}),
+		"DB_URL": types.ObjectValueMust(map[string]attr.Type{
+			"string_value":    types.StringType,
+			"encryption_key":  types.StringType,
+			"encrypted_value": types.StringType,
+			"plain_value":     types.StringType,
+		}, map[string]attr.Value{
+			"string_value":    types.StringValue("postgres://localhost:5432/mydb"),
+			"encryption_key":  types.StringNull(),
+			"encrypted_value": types.StringNull(),
+			"plain_value":     types.StringNull(),
+		}),
 	})
 
 	resource := &containersJobResource{
@@ -291,12 +337,13 @@ func TestContainersJobResource_EnvironmentVariables(t *testing.T) {
 	}
 
 	// Test converting to map
-	var envMap map[string]string
+	var envMap map[string]EnvVariableTerraformValue
 	diags := resource.EnvVariables.ElementsAs(context.Background(), &envMap, false)
 	if diags.HasError() {
 		t.Errorf("Failed to convert environment variables to map: %v", diags)
 	}
 
+	// Verify the environment variables
 	expectedEnvVars := map[string]string{
 		"PORT":   "8080",
 		"ENV":    "test",
@@ -304,11 +351,171 @@ func TestContainersJobResource_EnvironmentVariables(t *testing.T) {
 	}
 
 	for key, expectedValue := range expectedEnvVars {
-		if actualValue, exists := envMap[key]; !exists {
+		if envVar, exists := envMap[key]; !exists {
 			t.Errorf("Expected environment variable %s to exist", key)
-		} else if actualValue != expectedValue {
-			t.Errorf("Expected environment variable %s to be %s, got %s", key, expectedValue, actualValue)
+		} else if envVar.StringValue.ValueString() != expectedValue {
+			t.Errorf("Expected environment variable %s to be %s, got %s", key, expectedValue, envVar.StringValue.ValueString())
 		}
+	}
+}
+
+// Test mixed environment variable types
+func TestContainersJobResource_MixedEnvironmentVariables(t *testing.T) {
+	// Test creating a resource with mixed environment variable types
+	envVars := types.MapValueMust(types.ObjectType{
+		AttrTypes: map[string]attr.Type{
+			"string_value":    types.StringType,
+			"encryption_key":  types.StringType,
+			"encrypted_value": types.StringType,
+			"plain_value":     types.StringType,
+		},
+	}, map[string]attr.Value{
+		// String value
+		"PORT": types.ObjectValueMust(map[string]attr.Type{
+			"string_value":    types.StringType,
+			"encryption_key":  types.StringType,
+			"encrypted_value": types.StringType,
+			"plain_value":     types.StringType,
+		}, map[string]attr.Value{
+			"string_value":    types.StringValue("8080"),
+			"encryption_key":  types.StringNull(),
+			"encrypted_value": types.StringNull(),
+			"plain_value":     types.StringNull(),
+		}),
+		// Encrypted value
+		"API_SECRET": types.ObjectValueMust(map[string]attr.Type{
+			"string_value":    types.StringType,
+			"encryption_key":  types.StringType,
+			"encrypted_value": types.StringType,
+			"plain_value":     types.StringType,
+		}, map[string]attr.Value{
+			"string_value":    types.StringNull(),
+			"encryption_key":  types.StringValue("AES256:PROD_KEY"),
+			"encrypted_value": types.StringValue("eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."),
+			"plain_value":     types.StringNull(),
+		}),
+		// Plain value
+		"DB_PASSWORD": types.ObjectValueMust(map[string]attr.Type{
+			"string_value":    types.StringType,
+			"encryption_key":  types.StringType,
+			"encrypted_value": types.StringType,
+			"plain_value":     types.StringType,
+		}, map[string]attr.Value{
+			"string_value":    types.StringNull(),
+			"encryption_key":  types.StringNull(),
+			"encrypted_value": types.StringNull(),
+			"plain_value":     types.StringValue("super-secret-password"),
+		}),
+	})
+
+	resource := &containersJobResource{
+		Name:           types.StringValue("test-job"),
+		ContainerImage: types.StringValue("nginx:alpine"),
+		ScheduleType:   types.StringValue("relaxed"),
+		EnvVariables:   envVars,
+	}
+
+	// Verify the environment variables are set correctly
+	if resource.EnvVariables.IsNull() {
+		t.Error("Expected environment variables to be set")
+	}
+
+	// Test converting to map
+	var envMap map[string]EnvVariableTerraformValue
+	diags := resource.EnvVariables.ElementsAs(context.Background(), &envMap, false)
+	if diags.HasError() {
+		t.Errorf("Failed to convert environment variables to map: %v", diags)
+	}
+
+	// Verify string value
+	if envVar, exists := envMap["PORT"]; !exists {
+		t.Error("Expected environment variable PORT to exist")
+	} else if envVar.StringValue.ValueString() != "8080" {
+		t.Errorf("Expected PORT to be 8080, got %s", envVar.StringValue.ValueString())
+	}
+
+	// Verify encrypted value
+	if envVar, exists := envMap["API_SECRET"]; !exists {
+		t.Error("Expected environment variable API_SECRET to exist")
+	} else if envVar.EncryptionKey.ValueString() != "AES256:PROD_KEY" {
+		t.Errorf("Expected encryption key to be AES256:PROD_KEY, got %s", envVar.EncryptionKey.ValueString())
+	} else if envVar.EncryptedValue.ValueString() != "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..." {
+		t.Errorf("Expected encrypted value to be eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..., got %s", envVar.EncryptedValue.ValueString())
+	}
+
+	// Verify plain value
+	if envVar, exists := envMap["DB_PASSWORD"]; !exists {
+		t.Error("Expected environment variable DB_PASSWORD to exist")
+	} else if envVar.PlainValue.ValueString() != "super-secret-password" {
+		t.Errorf("Expected plain value to be super-secret-password, got %s", envVar.PlainValue.ValueString())
+	}
+}
+
+// Test EnvVariableValue marshaling and unmarshaling
+func TestEnvVariableValue_JSONHandling(t *testing.T) {
+	tests := []struct {
+		name         string
+		input        EnvVariableValue
+		expectedType string
+	}{
+		{
+			name: "string value",
+			input: EnvVariableValue{
+				StringValue: stringPtr("simple-value"),
+			},
+			expectedType: "string",
+		},
+		{
+			name: "encrypted value",
+			input: EnvVariableValue{
+				EncryptionKey:  stringPtr("AES256:KEY1"),
+				EncryptedValue: stringPtr("base64-encoded-ciphertext"),
+			},
+			expectedType: "encrypted",
+		},
+		{
+			name: "plain value",
+			input: EnvVariableValue{
+				PlainValue: stringPtr("plain-text-for-encryption"),
+			},
+			expectedType: "plain",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// Test marshaling
+			jsonData, err := json.Marshal(tt.input)
+			if err != nil {
+				t.Fatalf("Failed to marshal EnvVariableValue: %v", err)
+			}
+
+			// Test unmarshaling
+			var unmarshaled EnvVariableValue
+			err = json.Unmarshal(jsonData, &unmarshaled)
+			if err != nil {
+				t.Fatalf("Failed to unmarshal EnvVariableValue: %v", err)
+			}
+
+			// Verify the unmarshaled value matches the input based on type
+			switch tt.expectedType {
+			case "string":
+				if unmarshaled.StringValue == nil || *unmarshaled.StringValue != *tt.input.StringValue {
+					t.Errorf("Expected StringValue %s, got %s", *tt.input.StringValue, *unmarshaled.StringValue)
+				}
+			case "encrypted":
+				if unmarshaled.EncryptionKey == nil || *unmarshaled.EncryptionKey != *tt.input.EncryptionKey {
+					t.Errorf("Expected EncryptionKey %s, got %s", *tt.input.EncryptionKey, *unmarshaled.EncryptionKey)
+				}
+				if unmarshaled.EncryptedValue == nil || *unmarshaled.EncryptedValue != *tt.input.EncryptedValue {
+					t.Errorf("Expected EncryptedValue %s, got %s", *tt.input.EncryptedValue, *unmarshaled.EncryptedValue)
+				}
+			case "plain":
+				if unmarshaled.PlainValue == nil || *unmarshaled.PlainValue != *tt.input.PlainValue {
+					t.Errorf("Expected PlainValue %s, got %s", *tt.input.PlainValue, *unmarshaled.PlainValue)
+				}
+			}
+		})
 	}
 }
 

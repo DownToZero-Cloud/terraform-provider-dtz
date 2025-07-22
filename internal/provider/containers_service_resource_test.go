@@ -147,7 +147,7 @@ func TestContainersServiceResource_Configure(t *testing.T) {
 	}{
 		{
 			name: "valid provider data",
-			providerData: &dtzProvider{
+			providerData: dtzProvider{
 				ApiKey: "test-api-key",
 			},
 			expectedError: false,

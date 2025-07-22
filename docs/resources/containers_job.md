@@ -12,31 +12,234 @@ The `dtz_containers_job` resource allows you to create, update, and delete conta
 
 ## Example Usage
 
+### Basic Job
+
 ```terraform
 resource "dtz_containers_job" "example" {
   name = "my-container-job"
   container_image = "docker.io/library/hello-world:latest"
-  schedule_type = "precise"
+  schedule_type = "relaxed"
   schedule_cron = "52 3 * * *" #daily at 03:52am
 }
 ```
 
+### Job with Environment Variables
 
+```terraform
+resource "dtz_containers_job" "example_with_env" {
+  name = "my-container-job"
+  container_image = "nginx:alpine"
+  schedule_type = "precise"
+  schedule_cron = "0 0 * * *" #daily at midnight
+  
+  env_variables = {
+    PORT        = "8080"
+    DATABASE_URL = "postgres://localhost:5432/mydb"
+    API_KEY     = var.api_key
+    ENVIRONMENT = "production"
+  }
+}
+```
+
+### Job with Private Registry Authentication
+
+```terraform
+resource "dtz_containers_job" "private_registry_job" {
+  name = "private-registry-job"
+  container_image = "my-registry.com/my-app:v1.0.0"
+  schedule_type = "none"
+  
+  container_pull_user = "myuser"
+  container_pull_pwd  = var.registry_password
+}
+```
+
+### Advanced Job with Mixed Environment Variable Types (Future Enhancement)
+
+```terraform
+resource "dtz_containers_job" "advanced_job" {
+  name = "advanced-job"
+  container_image = "my-app:latest"
+  schedule_type = "precise"
+  schedule_cron = "0 2 * * *" # Daily at 2 AM
+  
+  # Current implementation (simple strings)
+  env_variables = {
+    PORT        = "8080"
+    ENVIRONMENT = "production"
+    LOG_LEVEL   = "info"
+  }
+  
+  # Future: Could support mixed types
+  # env_variables = {
+  #   # Simple string values
+  #   PORT        = "8080"
+  #   ENVIRONMENT = "production"
+  #   
+  #   # Pre-encrypted secrets
+  #   API_SECRET = {
+  #     encryption_key = "AES256:PROD_KEY"
+  #     encrypted_value = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+  #   }
+  #   
+  #   # Plain values for server-side encryption
+  #   DB_PASSWORD = {
+  #     plain_value = "super-secret-db-password"
+  #   }
+  #   
+  #   # Database connection (string)
+  #   DATABASE_URL = "postgres://user:pass@localhost:5432/mydb"
+  # }
+}
+```
+
+### Environment Variables
+
+Environment variables can be passed to the container. The provider supports simple string values and JSON-encoded complex values.
+
+#### Simple String Values
+```terraform
+env_variables = {
+  PORT = "8080"
+  ENV  = "production"
+}
+```
+
+#### Complex Values (JSON-encoded)
+For encrypted or plain values, use JSON strings:
+
+```terraform
+env_variables = {
+  # Encrypted value
+  SECRET_KEY = jsonencode({
+    encryptionKey  = "AES256:KEY1"
+    encryptedValue = "base64-encoded-ciphertext"
+  })
+  
+  # Plain value for server-side encryption
+  PASSWORD = jsonencode({
+    plainValue = "my-secret-password"
+  })
+}
+```
+
+#### Mixed Usage
+You can combine simple strings and complex values:
+
+```terraform
+env_variables = {
+  PORT        = "8080"
+  ENV         = "production"
+  SECRET_KEY  = jsonencode({
+    encryptionKey  = "AES256:KEY1"
+    encryptedValue = "base64-encoded-ciphertext"
+  })
+  PASSWORD    = jsonencode({
+    plainValue = "my-secret-password"
+  })
+}
+```
+
+### API Transformation Rules
+
+When using the underlying API directly, the following transformations occur:
+
+- **String values** (`#0`) → Returned as string values (unchanged)
+- **Plain value objects** (`#2`) → Transformed to encrypted objects (`#1`) by server
+- **Encrypted objects** (`#1`) → Returned as encrypted objects (unchanged)
+
+The current provider implementation handles these transformations automatically, presenting a simple string-based interface to users while supporting the full API capabilities internally.
+
+### Technical Implementation Details
+
+The provider uses a simplified approach for environment variables:
+
+**Current Behavior:**
+- Terraform users provide simple string values or JSON-encoded complex values
+- Provider converts all values to `EnvVariableValue` with appropriate fields set
+- API receives the correct format for each value type
+- Provider converts API responses back to string representations
+
+**Implementation Features:**
+- Support for simple string environment variables
+- Support for JSON-encoded encrypted and plain values
+- Automatic marshaling/unmarshaling between Terraform and API formats
+- Proper handling of API transformation rules
+- Type-safe conversion between different value types
+
+### API JSON Structure
+
+When the API receives environment variables, it expects the following JSON structures:
+
+#### String Value
+```json
+{
+  "envVariables": {
+    "PORT": "8080",
+    "ENV": "production"
+  }
+}
+```
+
+#### Encrypted Value
+```json
+{
+  "envVariables": {
+    "SECRET_KEY": {
+      "encryptionKey": "AES256:KEY1",
+      "encryptedValue": "base64-encoded-ciphertext"
+    }
+  }
+}
+```
+
+#### Plain Value
+```json
+{
+  "envVariables": {
+    "PASSWORD": {
+      "plainValue": "my-secret-password"
+    }
+  }
+}
+```
+
+The provider automatically handles the conversion between Terraform's string representation and the API's expected JSON structure.
+
+## Schedule Types
+
+- **`relaxed`**: Flexible scheduling that may be adjusted by the system for optimization
+- **`precise`**: Exact scheduling using cron expressions
+- **`none`**: No scheduling - job runs once and exits
+
+## Container Image Format
+
+The `container_image` field supports various Docker image formats:
+
+- Simple images: `nginx:alpine`
+- Registry images: `docker.io/library/nginx:latest`
+- Registry with port: `my-registry.com:5000/my-app:v1.0.0`
+- DTZ registry: `cr.dtz.rocks:3214/image-name:v0.1.2.3`
+- Images with digests: `nginx@sha256:abc1234567890`
+
+If no tag or digest is specified, `:latest` will be automatically appended.
+
+<!-- schema generated by tfplugindocs -->
 ## Schema
 
 ### Required
 
+- `container_image` (String) The Docker image to use for the job. If no tag or digest is specified, `:latest` will be automatically appended.
 - `name` (String) The name of the container job.
-- `container_image` (String) The Docker image to use for the job.
-- `schedule_type` (String) The type of schedule for the job.
+- `schedule_type` (String) The schedule type. Must be one of: 'relaxed', 'precise', or 'none'.
 
 ### Optional
 
-- `container_pull_user` (String) The username for private image registry authentication.
 - `container_pull_pwd` (String, Sensitive) The password for private image registry authentication.
-- `schedule_repeat` (String) The repeat interval for the job (used when `schedule_type` is not "cron").
+- `container_pull_user` (String) The username for private image registry authentication.
+- `env_variables` (Map of String) Environment variables to pass to the container. Each variable can be a simple string value.
 - `schedule_cron` (String) The cron expression for job scheduling (used when `schedule_type` is "precise").
-- `schedule_cost_optimization` (String) Cost optimization settings for the job.
+- `schedule_repeat` (String) The repeat interval for the job (used when `schedule_type` is not "cron").
 
 ### Read-Only
 

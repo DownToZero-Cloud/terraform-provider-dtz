@@ -3,7 +3,7 @@ module terraform-provider-dtz
 go 1.24
 
 require (
-	github.com/hashicorp/terraform-plugin-framework v1.15.0
+	github.com/hashicorp/terraform-plugin-framework v1.15.1
 	github.com/hashicorp/terraform-plugin-framework-validators v0.18.0
 	github.com/hashicorp/terraform-plugin-log v0.9.0
 )

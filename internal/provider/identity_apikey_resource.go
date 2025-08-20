@@ -219,7 +219,7 @@ func (d *identityApikeyResource) Delete(ctx context.Context, req resource.Delete
 		return
 	}
 
-	url := fmt.Sprintf("https://identity.dtz.rocks/api/2021-02-21/apikey/%s", state.Apikey.ValueString())
+	url := fmt.Sprintf("https://identity.dtz.rocks/api/2021-02-21/me/identity/apikey/%s", state.Apikey.ValueString())
 	request, err := http.NewRequest(http.MethodDelete, url, nil)
 	if err != nil {
 		resp.Diagnostics.AddError("Client Error", fmt.Sprintf("Unable to create request, got error: %s", err))

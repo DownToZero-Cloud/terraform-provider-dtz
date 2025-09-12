@@ -36,11 +36,14 @@ resource "dtz_containers_job" "example" {
 - `container_pull_pwd` (String, Sensitive) The password for private image registry authentication.
 - `schedule_repeat` (String) The repeat interval for the job (used when `schedule_type` is not "cron").
 - `schedule_cron` (String) The cron expression for job scheduling (used when `schedule_type` is "precise").
-- `schedule_cost_optimization` (String) Cost optimization settings for the job.
 
 ### Read-Only
 
 - `id` (String) The ID of this resource.
+
+## Validation
+
+- `container_image` must include a tag (e.g., `:1.2` or `:latest`) or a digest (e.g., `@sha256:...`).
 
 ## Import
 

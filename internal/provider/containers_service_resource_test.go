@@ -10,123 +10,6 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/types"
 )
 
-// Test the normalizeContainerImage function integration
-func TestContainersServiceResource_ImageNormalization(t *testing.T) {
-	tests := []struct {
-		name     string
-		input    string
-		expected string
-	}{
-		{
-			name:     "simple image without tag",
-			input:    "nginx",
-			expected: "nginx:latest",
-		},
-		{
-			name:     "image with tag",
-			input:    "nginx:1.21",
-			expected: "nginx:1.21",
-		},
-		{
-			name:     "registry image without tag",
-			input:    "docker.io/library/nginx",
-			expected: "docker.io/library/nginx:latest",
-		},
-		{
-			name:     "registry with port without tag",
-			input:    "localhost:5000/myimage",
-			expected: "localhost:5000/myimage:latest",
-		},
-		{
-			name:     "registry with port with tag",
-			input:    "localhost:5000/myimage:v1.0",
-			expected: "localhost:5000/myimage:v1.0",
-		},
-		// Test cases for the bug fix: malformed registry URLs with empty ports
-		{
-			name:     "registry with empty port without tag",
-			input:    "registry:/myimage",
-			expected: "registry:/myimage:latest",
-		},
-		{
-			name:     "registry with empty port with tag",
-			input:    "registry:/myimage:v1.0",
-			expected: "registry:/myimage:v1.0",
-		},
-		{
-			name:     "localhost with empty port without tag",
-			input:    "localhost:/myimage",
-			expected: "localhost:/myimage:latest",
-		},
-		{
-			name:     "localhost with empty port with tag",
-			input:    "localhost:/myimage:v1.0",
-			expected: "localhost:/myimage:v1.0",
-		},
-		{
-			name:     "registry with empty port and digest",
-			input:    "registry:/myimage@sha256:abc123",
-			expected: "registry:/myimage@sha256:abc123",
-		},
-		{
-			name:     "localhost with empty port and digest",
-			input:    "localhost:/myimage@sha256:def456",
-			expected: "localhost:/myimage@sha256:def456",
-		},
-		// Additional edge cases to ensure robustness
-		{
-			name:     "registry with non-numeric port",
-			input:    "registry:abc/myimage",
-			expected: "registry:abc/myimage:latest",
-		},
-		{
-			name:     "registry with non-numeric port and tag",
-			input:    "registry:abc/myimage:v2.0",
-			expected: "registry:abc/myimage:v2.0",
-		},
-		{
-			name:     "registry with mixed port (numeric and non-numeric)",
-			input:    "registry:123abc/myimage",
-			expected: "registry:123abc/myimage:latest",
-		},
-		// DTZ registry specific test cases
-		{
-			name:     "dtz registry with port and tag",
-			input:    "cr.dtz.rocks:3214/image-name:v0.1.2.3",
-			expected: "cr.dtz.rocks:3214/image-name:v0.1.2.3",
-		},
-		{
-			name:     "dtz registry with port and digest",
-			input:    "cr.dtz.rocks:3214/image-name@sha256:abc1234567890",
-			expected: "cr.dtz.rocks:3214/image-name@sha256:abc1234567890",
-		},
-		{
-			name:     "dtz registry with port, tag and digest",
-			input:    "cr.dtz.rocks:3214/image-name:v0.1.2.3@sha256:abc1234567890",
-			expected: "cr.dtz.rocks:3214/image-name:v0.1.2.3@sha256:abc1234567890",
-		},
-		{
-			name:     "dtz registry with port without tag",
-			input:    "cr.dtz.rocks:3214/image-name",
-			expected: "cr.dtz.rocks:3214/image-name:latest",
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			// Test the normalization by creating a request
-			createService := createServiceRequest{
-				Prefix:         "/test",
-				ContainerImage: normalizeContainerImage(tt.input),
-			}
-
-			if createService.ContainerImage != tt.expected {
-				t.Errorf("normalizeContainerImage(%q) = %q, want %q", tt.input, createService.ContainerImage, tt.expected)
-			}
-		})
-	}
-}
-
 // Test the resource type name generation
 func TestContainersServiceResource_TypeName(t *testing.T) {
 	// Test the type name generation logic
@@ -198,11 +81,10 @@ func TestContainersServiceResource_Configure(t *testing.T) {
 func TestContainersServiceResource_RequestResponseStructures(t *testing.T) {
 	// Test createServiceRequest marshaling
 	createReq := createServiceRequest{
-		Prefix:                "/test",
-		ContainerImage:        "nginx:alpine",
-		ContainerImageVersion: "latest",
-		ContainerPullUser:     "user",
-		ContainerPullPwd:      "password",
+		Prefix:            "/test",
+		ContainerImage:    "nginx:alpine",
+		ContainerPullUser: "user",
+		ContainerPullPwd:  "password",
 		EnvVariables: map[string]string{
 			"PORT": "8080",
 			"ENV":  "test",

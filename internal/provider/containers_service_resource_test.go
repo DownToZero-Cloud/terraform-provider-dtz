@@ -117,7 +117,7 @@ func TestContainersServiceResource_ImageNormalization(t *testing.T) {
 			// Test the normalization by creating a request
 			createService := createServiceRequest{
 				Prefix:         "/test",
-				ContainerImage: normalizeContainerImage(tt.input),
+				ContainerImage: tt.input,
 			}
 
 			if createService.ContainerImage != tt.expected {
@@ -198,11 +198,10 @@ func TestContainersServiceResource_Configure(t *testing.T) {
 func TestContainersServiceResource_RequestResponseStructures(t *testing.T) {
 	// Test createServiceRequest marshaling
 	createReq := createServiceRequest{
-		Prefix:                "/test",
-		ContainerImage:        "nginx:alpine",
-		ContainerImageVersion: "latest",
-		ContainerPullUser:     "user",
-		ContainerPullPwd:      "password",
+		Prefix:            "/test",
+		ContainerImage:    "nginx:alpine",
+		ContainerPullUser: "user",
+		ContainerPullPwd:  "password",
 		EnvVariables: map[string]string{
 			"PORT": "8080",
 			"ENV":  "test",

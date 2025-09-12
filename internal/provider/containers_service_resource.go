@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"regexp"
 	"strings"
 
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
@@ -57,13 +58,12 @@ type containersServiceResponse struct {
 }
 
 type createServiceRequest struct {
-	Prefix                string            `json:"prefix"`
-	ContainerImage        string            `json:"containerImage"`
-	ContainerImageVersion string            `json:"containerImageVersion,omitempty"`
-	ContainerPullUser     string            `json:"containerPullUser,omitempty"`
-	ContainerPullPwd      string            `json:"containerPullPwd,omitempty"`
-	EnvVariables          map[string]string `json:"envVariables,omitempty"`
-	Login                 *struct {
+	Prefix            string            `json:"prefix"`
+	ContainerImage    string            `json:"containerImage"`
+	ContainerPullUser string            `json:"containerPullUser,omitempty"`
+	ContainerPullPwd  string            `json:"containerPullPwd,omitempty"`
+	EnvVariables      map[string]string `json:"envVariables,omitempty"`
+	Login             *struct {
 		ProviderName string `json:"providerName"`
 	} `json:"login,omitempty"`
 }
@@ -83,9 +83,16 @@ func (d *containersServiceResource) Schema(_ context.Context, _ resource.SchemaR
 			},
 			"container_image": schema.StringAttribute{
 				Required: true,
+				Validators: []validator.String{
+					// Require either a digest anywhere, or a tag in the last path segment
+					stringvalidator.RegexMatches(
+						regexp.MustCompile(`(@)|(.*/[^/]*:[^/]*$)|(^[^/]*:[^/]*$)`),
+						"container_image must include a tag (e.g., :1.2 or :latest) or a digest (@sha256:...)",
+					),
+				},
 			},
 			"container_image_version": schema.StringAttribute{
-				Optional:           true,
+				Computed:           true,
 				DeprecationMessage: "This field is deprecated. Include the tag or digest directly in the container_image field instead.",
 			},
 			"container_pull_user": schema.StringAttribute{
@@ -124,11 +131,10 @@ func (d *containersServiceResource) Create(ctx context.Context, req resource.Cre
 	}
 
 	createService := createServiceRequest{
-		Prefix:                plan.Prefix.ValueString(),
-		ContainerImage:        normalizeContainerImage(plan.ContainerImage.ValueString()),
-		ContainerImageVersion: plan.ContainerImageVersion.ValueString(),
-		ContainerPullUser:     plan.ContainerPullUser.ValueString(),
-		ContainerPullPwd:      plan.ContainerPullPwd.ValueString(),
+		Prefix:            plan.Prefix.ValueString(),
+		ContainerImage:    plan.ContainerImage.ValueString(),
+		ContainerPullUser: plan.ContainerPullUser.ValueString(),
+		ContainerPullPwd:  plan.ContainerPullPwd.ValueString(),
 	}
 
 	if !plan.EnvVariables.IsNull() {
@@ -333,11 +339,10 @@ func (d *containersServiceResource) Update(ctx context.Context, req resource.Upd
 	}
 
 	updateService := createServiceRequest{
-		Prefix:                plan.Prefix.ValueString(),
-		ContainerImage:        normalizeContainerImage(plan.ContainerImage.ValueString()),
-		ContainerImageVersion: plan.ContainerImageVersion.ValueString(),
-		ContainerPullUser:     plan.ContainerPullUser.ValueString(),
-		ContainerPullPwd:      plan.ContainerPullPwd.ValueString(),
+		Prefix:            plan.Prefix.ValueString(),
+		ContainerImage:    plan.ContainerImage.ValueString(),
+		ContainerPullUser: plan.ContainerPullUser.ValueString(),
+		ContainerPullPwd:  plan.ContainerPullPwd.ValueString(),
 	}
 
 	if !plan.EnvVariables.IsNull() {

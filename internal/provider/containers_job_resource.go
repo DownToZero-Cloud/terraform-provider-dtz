@@ -6,10 +6,13 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"regexp"
 	"strings"
 
+	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
+	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 )
@@ -70,6 +73,12 @@ func (d *containersJobResource) Schema(_ context.Context, _ resource.SchemaReque
 			},
 			"container_image": schema.StringAttribute{
 				Required: true,
+				Validators: []validator.String{
+					stringvalidator.RegexMatches(
+						regexp.MustCompile(`(@)|(.*/[^/]*:[^/]*$)|(^[^/]*:[^/]*$)`),
+						"container_image must include a tag (e.g., :1.2 or :latest) or a digest (@sha256:...)",
+					),
+				},
 			},
 			"container_pull_user": schema.StringAttribute{
 				Optional: true,

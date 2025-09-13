@@ -307,7 +307,7 @@ func (d *containersJobResource) Update(ctx context.Context, req resource.UpdateR
 		return
 	}
 
-	plan.Id = types.StringValue(jobResponse.Id)
+	plan.Id = state.Id
 	plan.Name = types.StringValue(jobResponse.Name)
 	plan.ContainerImage = types.StringValue(jobResponse.ContainerImage)
 	plan.ContainerPullUser = types.StringPointerValue(jobResponse.ContainerPullUser)

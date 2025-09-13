@@ -12,6 +12,8 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
@@ -77,6 +79,9 @@ func (d *containersServiceResource) Schema(_ context.Context, _ resource.SchemaR
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
 				Computed: true,
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
+				},
 			},
 			"prefix": schema.StringAttribute{
 				Required: true,
@@ -417,7 +422,8 @@ func (d *containersServiceResource) Update(ctx context.Context, req resource.Upd
 		return
 	}
 
-	plan.Id = types.StringValue(serviceResponse.ServiceId)
+	// Do not modify the Terraform resource ID during update; preserve existing state ID
+	plan.Id = state.Id
 	plan.Prefix = types.StringValue(serviceResponse.Prefix)
 	plan.ContainerImage = types.StringValue(serviceResponse.ContainerImage)
 	plan.ContainerImageVersion = types.StringPointerValue(serviceResponse.ContainerImageVersion)

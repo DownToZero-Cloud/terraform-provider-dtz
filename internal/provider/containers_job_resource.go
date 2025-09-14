@@ -294,7 +294,7 @@ func (d *containersJobResource) Create(ctx context.Context, req resource.CreateR
 
 	createJob := createJobRequest{
 		Name:              plan.Name.ValueString(),
-		ContainerImage:    normalizeContainerImage(plan.ContainerImage.ValueString()),
+		ContainerImage:    plan.ContainerImage.ValueString(),
 		ContainerPullUser: plan.ContainerPullUser.ValueString(),
 		ContainerPullPwd:  plan.ContainerPullPwd.ValueString(),
 		ScheduleType:      plan.ScheduleType.ValueString(),
@@ -543,7 +543,7 @@ func (d *containersJobResource) Update(ctx context.Context, req resource.UpdateR
 
 	updateJob := createJobRequest{
 		Name:              plan.Name.ValueString(),
-		ContainerImage:    normalizeContainerImage(plan.ContainerImage.ValueString()),
+		ContainerImage:    plan.ContainerImage.ValueString(),
 		ContainerPullUser: plan.ContainerPullUser.ValueString(),
 		ContainerPullPwd:  plan.ContainerPullPwd.ValueString(),
 		ScheduleType:      plan.ScheduleType.ValueString(),

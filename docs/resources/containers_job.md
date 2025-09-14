@@ -12,6 +12,8 @@ The `dtz_containers_job` resource allows you to create, update, and delete conta
 
 ## Example Usage
 
+### Basic Job
+
 ```terraform
 resource "dtz_containers_job" "example" {
   name = "my-container-job"
@@ -21,21 +23,52 @@ resource "dtz_containers_job" "example" {
 }
 ```
 
+### Job with Environment Variables
+
+```terraform
+resource "dtz_containers_job" "example_with_env" {
+  name = "my-container-job"
+  container_image = "docker.io/library/hello-world:latest"
+  schedule_type = "precise"
+  schedule_cron = "0 0 * * *" #daily at midnight
+  
+  env_variables = {
+    PORT        = "8080"
+    DATABASE_URL = "postgres://localhost:5432/mydb"
+    API_KEY     = var.api_key
+    ENVIRONMENT = "production"
+  }
+}
+```
+
+### Job with Private Registry Authentication
+
+```terraform
+resource "dtz_containers_job" "private_registry_job" {
+  name = "private-registry-job"
+  container_image = "my-registry.com/my-app:v1.0.0"
+  schedule_type = "none"
+  
+  container_pull_user = "myuser"
+  container_pull_pwd  = var.registry_password
+}
+```
 
 ## Schema
 
 ### Required
 
+- `container_image` (String) The Docker image to use for the job. If no tag or digest is specified, `:latest` will be automatically appended.
 - `name` (String) The name of the container job.
-- `container_image` (String) The Docker image to use for the job.
-- `schedule_type` (String) The type of schedule for the job.
+- `schedule_type` (String) The schedule type. Must be one of: 'relaxed', 'precise', or 'none'.
 
 ### Optional
 
-- `container_pull_user` (String) The username for private image registry authentication.
 - `container_pull_pwd` (String, Sensitive) The password for private image registry authentication.
-- `schedule_repeat` (String) The repeat interval for the job (used when `schedule_type` is not "cron").
+- `container_pull_user` (String) The username for private image registry authentication.
+- `env_variables` (Map of String) Environment variables to pass to the container. Each variable can be a simple string value.
 - `schedule_cron` (String) The cron expression for job scheduling (used when `schedule_type` is "precise").
+- `schedule_repeat` (String) The repeat interval for the job (used when `schedule_type` is not "cron").
 
 ### Read-Only
 
@@ -44,11 +77,3 @@ resource "dtz_containers_job" "example" {
 ## Validation
 
 - `container_image` must include a tag (e.g., `:1.2` or `:latest`) or a digest (e.g., `@sha256:...`).
-
-## Import
-
-Import is supported using the following syntax:
-
-```shell
-terraform import dtz_containers_job.example <job_id>
-```

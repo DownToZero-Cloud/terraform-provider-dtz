@@ -33,7 +33,7 @@ resource "dtz_containers_service" "app" {
 # Private registry with authentication
 resource "dtz_containers_service" "private_app" {
   prefix              = "/private"
-  container_image     = "private-registry.com/app"
+  container_image     = "private-registry.com/app:latest"
   container_pull_user = "registry-user"
   container_pull_pwd  = var.registry_password
   
@@ -62,10 +62,9 @@ resource "dtz_containers_service" "production" {
 ### Required
 
 - `prefix` (String) The URL path prefix for your service (e.g., `/api`, `/app`). Must be unique within your context.
-- `container_image` (String) The Docker image to run. Supports three formats:
+- `container_image` (String) The Docker image to run. Must include a tag or a digest:
   - **With tag**: `nginx:1.21` or `myregistry.com/app:v2.0`
   - **With digest**: `nginx@sha256:abc123...` (recommended for production)
-  - **Image only**: `nginx` (automatically becomes `nginx:latest`)
 
 ### Optional
 
@@ -78,22 +77,13 @@ resource "dtz_containers_service" "production" {
 ### Read-Only
 
 - `id` (String) The unique identifier of the service.
-
-### Deprecated
-
-- `container_image_version` (String) **DEPRECATED**: Use the tag or digest directly in `container_image` instead.
+- `container_image_version` (String) Computed output. Use the tag or digest directly in `container_image` instead.
 
 ## Argument Reference
 
-### Container Image Behavior
+### Container Image Validation
 
-The `container_image` field automatically normalizes image names:
-
-| Input | Result | Use Case |
-|-------|--------|----------|
-| `nginx` | `nginx:latest` | Development/testing |
-| `nginx:1.21` | `nginx:1.21` | Specific version |
-| `nginx@sha256:abc...` | `nginx@sha256:abc...` | Immutable production deployments |
+The `container_image` must include either a tag (e.g., `:1.2` or `:latest`) or a digest (e.g., `@sha256:...`).
 
 ### Private Registry Authentication
 

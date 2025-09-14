@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"regexp"
 	"strings"
 
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
@@ -247,6 +248,12 @@ func (d *containersJobResource) Schema(_ context.Context, _ resource.SchemaReque
 			},
 			"container_image": schema.StringAttribute{
 				Required: true,
+				Validators: []validator.String{
+					stringvalidator.RegexMatches(
+						regexp.MustCompile(`(@)|(.*/[^/]*:[^/]*$)|(^[^/]*:[^/]*$)`),
+						"container_image must include a tag (e.g., :1.2 or :latest) or a digest (@sha256:...)",
+					),
+				},
 			},
 			"container_pull_user": schema.StringAttribute{
 				Optional: true,
@@ -527,6 +534,13 @@ func (d *containersJobResource) Update(ctx context.Context, req resource.UpdateR
 		return
 	}
 
+	var state containersJobResource
+	diags = req.State.Get(ctx, &state)
+	resp.Diagnostics.Append(diags...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
 	updateJob := createJobRequest{
 		Name:              plan.Name.ValueString(),
 		ContainerImage:    normalizeContainerImage(plan.ContainerImage.ValueString()),
@@ -564,7 +578,7 @@ func (d *containersJobResource) Update(ctx context.Context, req resource.UpdateR
 		return
 	}
 
-	url := fmt.Sprintf("https://containers.dtz.rocks/api/2021-02-21/job/%s", plan.Id.ValueString())
+	url := fmt.Sprintf("https://containers.dtz.rocks/api/2021-02-21/job/%s", state.Id.ValueString())
 	httpReq, err := http.NewRequest(http.MethodPost, url, strings.NewReader(string(body)))
 	if err != nil {
 		resp.Diagnostics.AddError("Client Error", fmt.Sprintf("Unable to create request, got error: %s", err))
@@ -610,7 +624,7 @@ func (d *containersJobResource) Update(ctx context.Context, req resource.UpdateR
 		return
 	}
 
-	plan.Id = types.StringValue(jobResponse.Id)
+	plan.Id = state.Id
 	plan.Name = types.StringValue(jobResponse.Name)
 	plan.ContainerImage = types.StringValue(jobResponse.ContainerImage)
 	plan.ContainerPullUser = types.StringPointerValue(jobResponse.ContainerPullUser)

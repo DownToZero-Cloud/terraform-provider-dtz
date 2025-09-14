@@ -73,3 +73,7 @@ resource "dtz_containers_job" "private_registry_job" {
 ### Read-Only
 
 - `id` (String) The ID of this resource.
+
+## Validation
+
+- `container_image` must include a tag (e.g., `:1.2` or `:latest`) or a digest (e.g., `@sha256:...`).

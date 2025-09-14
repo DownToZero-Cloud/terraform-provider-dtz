@@ -6,11 +6,14 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"regexp"
 	"strings"
 
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
@@ -57,13 +60,12 @@ type containersServiceResponse struct {
 }
 
 type createServiceRequest struct {
-	Prefix                string            `json:"prefix"`
-	ContainerImage        string            `json:"containerImage"`
-	ContainerImageVersion string            `json:"containerImageVersion,omitempty"`
-	ContainerPullUser     string            `json:"containerPullUser,omitempty"`
-	ContainerPullPwd      string            `json:"containerPullPwd,omitempty"`
-	EnvVariables          map[string]string `json:"envVariables,omitempty"`
-	Login                 *struct {
+	Prefix            string            `json:"prefix"`
+	ContainerImage    string            `json:"containerImage"`
+	ContainerPullUser string            `json:"containerPullUser,omitempty"`
+	ContainerPullPwd  string            `json:"containerPullPwd,omitempty"`
+	EnvVariables      map[string]string `json:"envVariables,omitempty"`
+	Login             *struct {
 		ProviderName string `json:"providerName"`
 	} `json:"login,omitempty"`
 }
@@ -77,15 +79,25 @@ func (d *containersServiceResource) Schema(_ context.Context, _ resource.SchemaR
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
 				Computed: true,
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
+				},
 			},
 			"prefix": schema.StringAttribute{
 				Required: true,
 			},
 			"container_image": schema.StringAttribute{
 				Required: true,
+				Validators: []validator.String{
+					// Require either a digest anywhere, or a tag in the last path segment
+					stringvalidator.RegexMatches(
+						regexp.MustCompile(`(@)|(.*/[^/]*:[^/]*$)|(^[^/]*:[^/]*$)`),
+						"container_image must include a tag (e.g., :1.2 or :latest) or a digest (@sha256:...)",
+					),
+				},
 			},
 			"container_image_version": schema.StringAttribute{
-				Optional:           true,
+				Computed:           true,
 				DeprecationMessage: "This field is deprecated. Include the tag or digest directly in the container_image field instead.",
 			},
 			"container_pull_user": schema.StringAttribute{
@@ -124,11 +136,10 @@ func (d *containersServiceResource) Create(ctx context.Context, req resource.Cre
 	}
 
 	createService := createServiceRequest{
-		Prefix:                plan.Prefix.ValueString(),
-		ContainerImage:        normalizeContainerImage(plan.ContainerImage.ValueString()),
-		ContainerImageVersion: plan.ContainerImageVersion.ValueString(),
-		ContainerPullUser:     plan.ContainerPullUser.ValueString(),
-		ContainerPullPwd:      plan.ContainerPullPwd.ValueString(),
+		Prefix:            plan.Prefix.ValueString(),
+		ContainerImage:    plan.ContainerImage.ValueString(),
+		ContainerPullUser: plan.ContainerPullUser.ValueString(),
+		ContainerPullPwd:  plan.ContainerPullPwd.ValueString(),
 	}
 
 	if !plan.EnvVariables.IsNull() {
@@ -189,7 +200,7 @@ func (d *containersServiceResource) Create(ctx context.Context, req resource.Cre
 		resp.Diagnostics.AddError("Client Error", fmt.Sprintf("Unable to create service, got error: %s", err))
 		return
 	}
-	defer deferredCloseResponseBody(ctx, res.Body)
+	defer deferredCloseResponseBody(ctx, res.Body)()
 
 	resp_body, err := io.ReadAll(res.Body)
 	if err != nil {
@@ -259,7 +270,7 @@ func (d *containersServiceResource) Read(ctx context.Context, req resource.ReadR
 		resp.Diagnostics.AddError("Client Error", fmt.Sprintf("Unable to read service, got error: %s", err))
 		return
 	}
-	defer deferredCloseResponseBody(ctx, response.Body)
+	defer deferredCloseResponseBody(ctx, response.Body)()
 
 	body, err := io.ReadAll(response.Body)
 	if err != nil {
@@ -333,11 +344,10 @@ func (d *containersServiceResource) Update(ctx context.Context, req resource.Upd
 	}
 
 	updateService := createServiceRequest{
-		Prefix:                plan.Prefix.ValueString(),
-		ContainerImage:        normalizeContainerImage(plan.ContainerImage.ValueString()),
-		ContainerImageVersion: plan.ContainerImageVersion.ValueString(),
-		ContainerPullUser:     plan.ContainerPullUser.ValueString(),
-		ContainerPullPwd:      plan.ContainerPullPwd.ValueString(),
+		Prefix:            plan.Prefix.ValueString(),
+		ContainerImage:    plan.ContainerImage.ValueString(),
+		ContainerPullUser: plan.ContainerPullUser.ValueString(),
+		ContainerPullPwd:  plan.ContainerPullPwd.ValueString(),
 	}
 
 	if !plan.EnvVariables.IsNull() {
@@ -376,7 +386,7 @@ func (d *containersServiceResource) Update(ctx context.Context, req resource.Upd
 		return
 	}
 
-	url := fmt.Sprintf("https://containers.dtz.rocks/api/2021-02-21/service/%s", plan.Id.ValueString())
+	url := fmt.Sprintf("https://containers.dtz.rocks/api/2021-02-21/service/%s", state.Id.ValueString())
 	httpReq, err := http.NewRequest(http.MethodPost, url, strings.NewReader(string(body)))
 	if err != nil {
 		resp.Diagnostics.AddError("Client Error", fmt.Sprintf("Unable to create request, got error: %s", err))
@@ -398,7 +408,7 @@ func (d *containersServiceResource) Update(ctx context.Context, req resource.Upd
 		resp.Diagnostics.AddError("Client Error", fmt.Sprintf("Unable to update service, got error: %s", err))
 		return
 	}
-	defer deferredCloseResponseBody(ctx, res.Body)
+	defer deferredCloseResponseBody(ctx, res.Body)()
 
 	if res.StatusCode != http.StatusOK {
 		resp.Diagnostics.AddError("API Error", fmt.Sprintf("Unable to update service, status code: %d", res.StatusCode))
@@ -412,7 +422,8 @@ func (d *containersServiceResource) Update(ctx context.Context, req resource.Upd
 		return
 	}
 
-	plan.Id = types.StringValue(serviceResponse.ServiceId)
+	// Do not modify the Terraform resource ID during update; preserve existing state ID
+	plan.Id = state.Id
 	plan.Prefix = types.StringValue(serviceResponse.Prefix)
 	plan.ContainerImage = types.StringValue(serviceResponse.ContainerImage)
 	plan.ContainerImageVersion = types.StringPointerValue(serviceResponse.ContainerImageVersion)
@@ -465,7 +476,7 @@ func (d *containersServiceResource) Delete(ctx context.Context, req resource.Del
 		resp.Diagnostics.AddError("Client Error", fmt.Sprintf("Unable to delete service, got error: %s", err))
 		return
 	}
-	defer deferredCloseResponseBody(ctx, response.Body)
+	defer deferredCloseResponseBody(ctx, response.Body)()
 
 	if response.StatusCode == http.StatusNotFound {
 		return

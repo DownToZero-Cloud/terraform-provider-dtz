@@ -12,6 +12,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/mapplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
@@ -110,6 +111,10 @@ func (d *containersServiceResource) Schema(_ context.Context, _ resource.SchemaR
 			"env_variables": schema.MapAttribute{
 				ElementType: types.StringType,
 				Optional:    true,
+				Sensitive:   true,
+				PlanModifiers: []planmodifier.Map{
+					mapplanmodifier.UseStateForUnknown(),
+				},
 			},
 			"login": schema.SingleNestedAttribute{
 				Optional: true,
@@ -224,12 +229,18 @@ func (d *containersServiceResource) Create(ctx context.Context, req resource.Cre
 	plan.ContainerPullUser = types.StringPointerValue(serviceResponse.ContainerPullUser)
 	plan.ContainerPullPwd = types.StringPointerValue(serviceResponse.ContainerPullPwd)
 
-	envVars, diags := types.MapValueFrom(ctx, types.StringType, serviceResponse.EnvVariables)
-	resp.Diagnostics.Append(diags...)
-	if resp.Diagnostics.HasError() {
-		return
+	// Preserve planned sensitive env_variables in state to avoid inconsistent sensitive values
+	if !plan.EnvVariables.IsNull() && !plan.EnvVariables.IsUnknown() {
+		// keep as provided in the plan
+	} else {
+		// fall back to API response when nothing was planned
+		envVars, diags := types.MapValueFrom(ctx, types.StringType, serviceResponse.EnvVariables)
+		resp.Diagnostics.Append(diags...)
+		if resp.Diagnostics.HasError() {
+			return
+		}
+		plan.EnvVariables = envVars
 	}
-	plan.EnvVariables = envVars
 
 	if serviceResponse.Login != nil {
 		plan.Login = &LoginModel{
@@ -298,12 +309,15 @@ func (d *containersServiceResource) Read(ctx context.Context, req resource.ReadR
 	state.ContainerPullUser = types.StringPointerValue(serviceResponse.ContainerPullUser)
 	state.ContainerPullPwd = types.StringPointerValue(serviceResponse.ContainerPullPwd)
 
-	envVars, diags := types.MapValueFrom(ctx, types.StringType, serviceResponse.EnvVariables)
-	resp.Diagnostics.Append(diags...)
-	if resp.Diagnostics.HasError() {
-		return
+	// Do not overwrite sensitive env_variables from state on Read; only set when empty
+	if state.EnvVariables.IsNull() || state.EnvVariables.IsUnknown() {
+		envVars, diags := types.MapValueFrom(ctx, types.StringType, serviceResponse.EnvVariables)
+		resp.Diagnostics.Append(diags...)
+		if resp.Diagnostics.HasError() {
+			return
+		}
+		state.EnvVariables = envVars
 	}
-	state.EnvVariables = envVars
 
 	if serviceResponse.Login != nil {
 		state.Login = &LoginModel{
@@ -430,12 +444,18 @@ func (d *containersServiceResource) Update(ctx context.Context, req resource.Upd
 	plan.ContainerPullUser = types.StringPointerValue(serviceResponse.ContainerPullUser)
 	plan.ContainerPullPwd = types.StringPointerValue(serviceResponse.ContainerPullPwd)
 
-	envVars, diags := types.MapValueFrom(ctx, types.StringType, serviceResponse.EnvVariables)
-	resp.Diagnostics.Append(diags...)
-	if resp.Diagnostics.HasError() {
-		return
+	// Preserve planned sensitive env_variables in state to avoid inconsistent sensitive values
+	if !plan.EnvVariables.IsNull() && !plan.EnvVariables.IsUnknown() {
+		// keep as provided in the plan
+	} else {
+		// fall back to API response when nothing was planned
+		envVars, diags := types.MapValueFrom(ctx, types.StringType, serviceResponse.EnvVariables)
+		resp.Diagnostics.Append(diags...)
+		if resp.Diagnostics.HasError() {
+			return
+		}
+		plan.EnvVariables = envVars
 	}
-	plan.EnvVariables = envVars
 
 	if serviceResponse.Login != nil {
 		plan.Login = &LoginModel{

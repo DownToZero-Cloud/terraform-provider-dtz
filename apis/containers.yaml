@@ -1,7 +1,7 @@
 openapi: 3.1.0
 info:
   title: DTZ Containers
-  version: 1.0.12
+  version: 2.1.0
   description: a generated client for the DTZ Containers API
   license:
     name: Apache 2.0
@@ -134,6 +134,44 @@ paths:
           application/json:
             schema:
               $ref: '#/components/schemas/CreateService'
+            examples:
+              basic_service:
+                summary: Basic web service
+                description: Deploy a simple nginx service accessible at the root path
+                value:
+                  prefix: "/"
+                  containerImage: "nginx:latest"
+              authenticated_service:
+                summary: Service with DTZ authentication
+                description: Deploy a web application with DTZ authentication enabled
+                value:
+                  prefix: "/app"
+                  containerImage: "myregistry/webapp:v2.1.0"
+                  login:
+                    providerName: "dtz"
+                  envVariables:
+                    DATABASE_URL: "postgresql://localhost:5432/myapp"
+                    API_KEY: "secret-api-key"
+              service_with_digest:
+                summary: Service with specific image digest
+                description: Deploy using a specific SHA256 digest instead of a tag
+                value:
+                  prefix: "/secure-app"
+                  containerImage: "myregistry/secure-app"
+                  containerImageVersion: "@sha256:b5b2b2c507a0944348e0303114d8d93aaaa081732b86451d9bce1f432a537bc7"
+                  login:
+                    providerName: "dtz"
+              private_registry_service:
+                summary: Service from private registry
+                description: Deploy a service from a private container registry
+                value:
+                  prefix: "/private-app"
+                  containerImage: "private.registry.com/myapp:production"
+                  containerPullUser: "username"
+                  containerPullPwd: "password"
+                  envVariables:
+                    ENV: "production"
+                    LOG_LEVEL: "info"
       responses:
         "200":
           description: success
@@ -176,23 +214,7 @@ paths:
         content: 
           application/json:
             schema:
-              type: object
-              properties:
-                prefix:
-                  type: string
-                containerImage:
-                  type: string
-                containerImageVersion:
-                  type: string
-                containerPullUser:
-                  type: string
-                containerPullPwd:
-                  type: string
-                envVariables:
-                  type: object
-              required:
-                - prefix
-                - containerImage
+              $ref: '#/components/schemas/UpdateService'
       responses:
         "200":
           description: success
@@ -226,34 +248,7 @@ paths:
               schema:
                 type: array
                 items:
-                  type: object
-                  properties:
-                    id:
-                      type: string
-                      format: JobId
-                    name:
-                      type: string
-                    containerImage:
-                      type: string
-                    containerPullUser:
-                      type: string
-                    containerPullPwd:
-                      type: string
-                    scheduleType:
-                      type: string
-                    scheduleRepeat:
-                      type: string
-                    scheduleCron:
-                      type: string
-                      examples: 
-                        - "4 2 * * *"
-                    scheduleCostOptimzation:
-                      type: string
-                  required:
-                    - id
-                    - name
-                    - containerImage
-                    - scheduleType
+                  $ref: '#/components/schemas/JobResponse'
     post:
       summary: create new job
       operationId: createJob
@@ -262,31 +257,23 @@ paths:
         content: 
           application/json:
             schema:
-              type: object
-              properties:
-                name:
-                  type: string
-                containerImage:
-                  type: string
-                containerPullUser:
-                  type: string
-                containerPullPwd:
-                  type: string
-                scheduleType:
-                  type: string
-                scheduleCron:
-                  type: string
-                scheduleCostOptimzation:
-                  type: string
-                scheduleRepeat:
-                  type: string
+              $ref: '#/components/schemas/CreateJob'
       responses:
         "200":
           description: success
           content:
             application/json: 
               schema:
-                $ref: '#/components/schemas/JobResponse'   
+                $ref: '#/components/schemas/JobResponse'
+        "400":
+          description: request data was invalid
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  msg:
+                    type: string  
   /job/{job_id}:
     get:
       summary: get single job
@@ -338,6 +325,8 @@ paths:
       responses:
         "200":
           description: success
+        "404":
+          description: job not found
     delete:
       summary: delete single job
       operationId: deleteJob
@@ -359,6 +348,40 @@ components:
       properties:
         msg:
           type: string
+    CreateJob:
+      type: object
+      properties:
+        name:
+          type: string
+        containerImage:
+          type: string
+        containerPullUser:
+          type: string
+        containerPullPwd:
+          type: string
+        scheduleType:
+          type: string
+          enum:
+          - relaxed
+          - precise
+          - none
+        scheduleCron:
+          type: string
+        scheduleRepeat:
+          type: string
+          description: "ecoMode repetition bounds in the format 'min(<freq>) max(<freq>)'. Allowed frequencies: hourly, daily, weekly, monthly. See docs/scheduling.md."
+          pattern: "^min\\((hourly|daily|weekly|monthly)\\)\\s+max\\((hourly|daily|weekly|monthly)\\)$"
+        envVariables:
+          type: object
+          additionalProperties:
+            oneOf:
+            - type: string
+            - $ref: '#/components/schemas/EncryptedValue'
+            - $ref: '#/components/schemas/PlainValue'
+      required:
+      - name
+      - containerImage
+      - scheduleType
     JobResponse:
       type: object
       properties:
@@ -375,12 +398,22 @@ components:
           type: string
         scheduleType:
           type: string
+          enum:
+            - relaxed
+            - precise
+            - none
         scheduleRepeat:
           type: string
+          description: "ecoMode repetition bounds in the format 'min(<freq>) max(<freq>)'. Allowed frequencies: hourly, daily, weekly, monthly. See docs/scheduling.md."
+          pattern: "^min\\((hourly|daily|weekly|monthly)\\)\\s+max\\((hourly|daily|weekly|monthly)\\)$"
         scheduleCron:
           type: string
-        scheduleCostOptimzation:
-          type: string
+        envVariables:
+          type: object
+          additionalProperties:
+            oneOf:
+            - type: string
+            - $ref: '#/components/schemas/EncryptedValue'
       required:
         - id
         - name
@@ -417,10 +450,21 @@ components:
         contextId:
           type: string
           format: ContextId
+        enabled:
+          type: boolean
+          description: whether this service is active and should be propagated to ingress
+        domain:
+          description: by default this property is empty, this property is only populated if it was part of the service creation.
+          type: array
+          items:
+            type: string
         serviceId:
           type: string
           format: ServiceId
         created:
+          type: string
+          format: date-time
+        updated:
           type: string
           format: date-time
         prefix:
@@ -435,6 +479,23 @@ components:
           type: string
         envVariables:
           type: object
+          additionalProperties:
+            oneOf:
+            - type: string
+            - $ref: '#/components/schemas/EncryptedValue'
+        rewrite:
+          description: provids url rewriting capabilities
+          type: object
+          properties:
+            source:
+              type: string
+              description: regex to match the incoming uri
+            target:
+              description: replacement value
+              type: string
+          required:
+            - source
+            - target
         login:
           type: object
           properties:
@@ -446,11 +507,20 @@ components:
         - contextId
         - serviceId
         - created
+        - enabled
         - prefix
         - containerImage
     CreateService:
       type: object
       properties:
+        enabled:
+          type: boolean
+          description: whether this service is active and should be propagated to ingress
+        domain:
+          description: by default this property is empty and represents that all verified domains will be added. I a domain is added through a service, this service will only be served through that domain, und new domain als also no longer added automatically.
+          type: array
+          items:
+            type: string
         prefix:
           type: string
         containerImage:
@@ -463,6 +533,24 @@ components:
           type: string
         envVariables:
           type: object
+          additionalProperties:
+            oneOf:
+            - type: string
+            - $ref: '#/components/schemas/EncryptedValue'
+            - $ref: '#/components/schemas/PlainValue'
+        rewrite:
+          description: provids url rewriting capabilities
+          type: object
+          properties:
+            source:
+              type: string
+              description: regex to match the incoming uri
+            target:
+              description: replacement value
+              type: string
+          required:
+            - source
+            - target
         login:
           type: object
           properties:
@@ -471,20 +559,84 @@ components:
           required:
           - providerName
       required:
+        - enabled
         - prefix
         - containerImage
+    UpdateService:
+      type: object
+      description: Partial update for a service; all fields are optional
+      properties:
+        enabled:
+          type: boolean
+          description: whether this service is active and should be propagated to ingress
+        domain:
+          description: by default this property is empty and represents that all verified domains will be added. I a domain is added through a service, this service will only be served through that domain, und new domain als also no longer added automatically.
+          type: array
+          items:
+            type: string
+        prefix:
+          type: string
+        containerImage:
+          type: string
+        containerImageVersion:
+          type: string
+        containerPullUser:
+          type: string
+        containerPullPwd:
+          type: string
+        envVariables:
+          type: object
+          additionalProperties:
+            oneOf:
+            - type: string
+            - $ref: '#/components/schemas/EncryptedValue'
+            - $ref: '#/components/schemas/PlainValue'
+        rewrite:
+          description: provids url rewriting capabilities
+          type: object
+          properties:
+            source:
+              type: string
+              description: regex to match the incoming uri
+            target:
+              description: replacement value
+              type: string
+          required:
+            - source
+            - target
+    EncryptedValue:
+      type: object
+      properties:
+        encryptionKey:
+          type: string
+          description: "Encryption algorithm or key reference, e.g. 'AES256:KEY1'."
+        encryptedValue:
+          type: string
+          description: "The base-64 encoded ciphertext."
+    PlainValue:
+      type: object
+      properties:
+        plainValue:
+          type: string
+          description: "the plain text value for server side encryption"
   securitySchemes:
-    dtz_auth:
+    dtz_oauth:
+      type: oauth2
+      flows:
+        authorizationCode:
+          authorizationUrl: https://identity.dtz.rocks/api/2021-02-21/oauth/authorize
+          tokenUrl: https://identity.dtz.rocks/api/2021-02-21/oauth/token
+          scopes:
+            openid: "default profile"
+    dtz_apikey:
       type: apiKey
       in: header
       name: X-API-KEY
-    dtz_auth2:
-      type: oauth2
-      flows:
-        implicit:
-          authorizationUrl: https://identity.dtz.rocks/api/2021-02-21/token/auth
-          scopes:
-            dummy:dummy: dummy
+    dtz-cookie:
+      type: apiKey
+      in: cookie
+      name: dtz_auth
 security:
-  - dtz_auth: []
-  - dtz_auth2: []
+  - dtz_apikey: []
+  - dtz_oauth: []
+  - dtz-cookie: []

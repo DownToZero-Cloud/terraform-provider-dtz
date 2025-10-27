@@ -604,6 +604,15 @@ components:
           required:
             - source
             - target
+        login:
+          type: object
+          description: a login can only be added, to remove the login functionality, 
+            either set the providerName to an empty string or recreate the service without the login property
+          properties:
+            providerName:
+              type: string
+          required:
+          - providerName
     EncryptedValue:
       type: object
       properties:

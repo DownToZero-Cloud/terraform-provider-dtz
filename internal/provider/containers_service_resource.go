@@ -122,9 +122,9 @@ func (d *containersServiceResource) Schema(_ context.Context, _ resource.SchemaR
 					"provider_name": schema.StringAttribute{
 						Required: true,
 						Validators: []validator.String{
-							stringvalidator.OneOf("dtz"),
+							stringvalidator.OneOf("dtz", ""),
 						},
-						Description: "The login provider name. Only 'dtz' is currently supported.",
+						Description: "The login provider name. Use 'dtz' to enable login or an empty string to remove login.",
 					},
 				},
 			},
@@ -346,17 +346,6 @@ func (d *containersServiceResource) Update(ctx context.Context, req resource.Upd
 		return
 	}
 
-	// Check if trying to remove login block (not supported by API)
-	if state.Login != nil && plan.Login == nil {
-		resp.Diagnostics.AddError(
-			"Unsupported Operation",
-			"Cannot remove authentication from an existing service. The API does not support removing the login block from an existing service. Please either:\n"+
-				"1. Keep the login block in your configuration, or\n"+
-				"2. Delete and recreate the service without authentication.",
-		)
-		return
-	}
-
 	updateService := createServiceRequest{
 		Prefix:            plan.Prefix.ValueString(),
 		ContainerImage:    plan.ContainerImage.ValueString(),
@@ -382,8 +371,9 @@ func (d *containersServiceResource) Update(ctx context.Context, req resource.Upd
 		}
 
 		providerName := plan.Login.ProviderName.ValueString()
-		if providerName != "dtz" {
-			resp.Diagnostics.AddError("Validation Error", "provider_name must be 'dtz' (only supported provider)")
+		// Allow either 'dtz' to enable/update login, or '' to remove login per API semantics
+		if providerName != "dtz" && providerName != "" {
+			resp.Diagnostics.AddError("Validation Error", "provider_name must be 'dtz' to enable login or empty string to remove it")
 			return
 		}
 
@@ -391,6 +381,13 @@ func (d *containersServiceResource) Update(ctx context.Context, req resource.Upd
 			ProviderName string `json:"providerName"`
 		}{
 			ProviderName: providerName,
+		}
+	} else if state.Login != nil {
+		// The login block was removed from the configuration; translate to removal by sending empty providerName
+		updateService.Login = &struct {
+			ProviderName string `json:"providerName"`
+		}{
+			ProviderName: "",
 		}
 	}
 
@@ -401,6 +398,11 @@ func (d *containersServiceResource) Update(ctx context.Context, req resource.Upd
 	}
 
 	url := fmt.Sprintf("https://containers.dtz.rocks/api/2021-02-21/service/%s", state.Id.ValueString())
+	// debug log the body
+	tflog.Debug(ctx, "Update service request payload", map[string]interface{}{
+		"endpoint": url,
+		"payload":  string(body),
+	})
 	httpReq, err := http.NewRequest(http.MethodPost, url, strings.NewReader(string(body)))
 	if err != nil {
 		resp.Diagnostics.AddError("Client Error", fmt.Sprintf("Unable to create request, got error: %s", err))

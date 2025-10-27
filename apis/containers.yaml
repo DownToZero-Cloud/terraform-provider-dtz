@@ -1,7 +1,7 @@
 openapi: 3.1.0
 info:
   title: DTZ Containers
-  version: 2.1.0
+  version: 2.1.3
   description: a generated client for the DTZ Containers API
   license:
     name: Apache 2.0
@@ -24,6 +24,18 @@ paths:
       responses:
         "200":
           description: service enabled
+        "401":
+          description: unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        "500":
+          description: error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
   /disable:
     post:
       summary: disable the containers service
@@ -52,7 +64,7 @@ paths:
         content: 
           application/json:
             schema:
-              $ref: '#/components/schemas/CreateDomain'
+              $ref: '#/components/schemas/CreateDomainRequest'
       responses:
         "200":
           description: success
@@ -62,13 +74,13 @@ paths:
                 $ref: '#/components/schemas/Domain'
         "409":
           description: domain already registered
-  /domain/{domain_name}:
+  /domain/{domainName}:
     get:
       summary: get single domain
       operationId: getDomain
       parameters:
         - in: path
-          name: domain_name
+          name: domainName
           schema:
             type: string
           required: true
@@ -80,12 +92,14 @@ paths:
             application/json: 
               schema:
                 $ref: '#/components/schemas/Domain'
+        "404":
+          description: not found
     delete:
       summary: delete single domain
       operationId: deleteDomain
       parameters:
         - in: path
-          name: domain_name
+          name: domainName
           schema:
             type: string
           required: true
@@ -98,7 +112,7 @@ paths:
       operationId: verifyDomain
       parameters:
         - in: path
-          name: domain_name
+          name: domainName
           schema:
             type: string
           required: true
@@ -106,6 +120,18 @@ paths:
       responses:
         "200":
           description: success
+        "401":
+          description: unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        "409":
+          description: conflict
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
         "500":
           description: error
           content:
@@ -133,7 +159,7 @@ paths:
         content: 
           application/json:
             schema:
-              $ref: '#/components/schemas/CreateService'
+              $ref: '#/components/schemas/CreateServiceRequest'
             examples:
               basic_service:
                 summary: Basic web service
@@ -198,6 +224,8 @@ paths:
             application/json: 
               schema:
                 $ref: '#/components/schemas/Service'
+        "404":
+          description: not found
     post:
       summary: update service
       operationId: updateService
@@ -214,7 +242,7 @@ paths:
         content: 
           application/json:
             schema:
-              $ref: '#/components/schemas/UpdateService'
+              $ref: '#/components/schemas/UpdateServiceRequest'
       responses:
         "200":
           description: success
@@ -222,6 +250,8 @@ paths:
             application/json: 
               schema:
                 $ref: '#/components/schemas/Service'
+        "404":
+          description: not found
     delete:
       summary: delete service
       operationId: deleteService
@@ -257,7 +287,7 @@ paths:
         content: 
           application/json:
             schema:
-              $ref: '#/components/schemas/CreateJob'
+              $ref: '#/components/schemas/CreateJobRequest'
       responses:
         "200":
           description: success
@@ -274,13 +304,13 @@ paths:
                 properties:
                   msg:
                     type: string  
-  /job/{job_id}:
+  /job/{jobId}:
     get:
       summary: get single job
       operationId: getJob
       parameters:
         - in: path
-          name: job_id
+          name: jobId
           schema:
             type: string
             format: JobId
@@ -293,12 +323,14 @@ paths:
             application/json: 
               schema:
                 $ref: '#/components/schemas/JobResponse'
+        "401":
+          description: unauthorized
     post:
       summary: update single job
       operationId: updateJob
       parameters:
         - in: path
-          name: job_id
+          name: jobId
           schema:
             type: string
             format: JobId
@@ -316,7 +348,7 @@ paths:
       operationId: triggerJob
       parameters:
         - in: path
-          name: job_id
+          name: jobId
           schema:
             type: string
             format: JobId
@@ -325,6 +357,8 @@ paths:
       responses:
         "200":
           description: success
+        "401":
+          description: unauthorized
         "404":
           description: job not found
     delete:
@@ -332,7 +366,7 @@ paths:
       operationId: deleteJob
       parameters:
         - in: path
-          name: job_id
+          name: jobId
           schema:
             type: string
             format: JobId
@@ -348,7 +382,7 @@ components:
       properties:
         msg:
           type: string
-    CreateJob:
+    CreateJobRequest:
       type: object
       properties:
         name:
@@ -437,7 +471,7 @@ components:
         - name
         - verified
         - created
-    CreateDomain:
+    CreateDomainRequest:
       type: object
       properties:
         name:
@@ -510,7 +544,7 @@ components:
         - enabled
         - prefix
         - containerImage
-    CreateService:
+    CreateServiceRequest:
       type: object
       properties:
         enabled:
@@ -526,7 +560,9 @@ components:
         containerImage:
           type: string
         containerImageVersion:
+          description: the version of the container image; either empty string to reset or a sha256 digest in the form of "sha256:digest"
           type: string
+          pattern: "^(|sha256:[a-f0-9]{64})$"
         containerPullUser:
           type: string
         containerPullPwd:
@@ -562,9 +598,9 @@ components:
         - enabled
         - prefix
         - containerImage
-    UpdateService:
+    UpdateServiceRequest:
       type: object
-      description: Partial update for a service; all fields are optional
+      description: Full update for a service; all fields are required and will overwrite existing values
       properties:
         enabled:
           type: boolean
@@ -579,7 +615,9 @@ components:
         containerImage:
           type: string
         containerImageVersion:
+          description: the version of the container image; either empty string to reset or a sha256 digest in the form of "sha256:digest"
           type: string
+          pattern: "^(|sha256:[a-f0-9]{64})$"
         containerPullUser:
           type: string
         containerPullPwd:
@@ -613,6 +651,11 @@ components:
               type: string
           required:
           - providerName
+      required:
+        - enabled
+        - prefix
+        - containerImage
+        - envVariables
     EncryptedValue:
       type: object
       properties:

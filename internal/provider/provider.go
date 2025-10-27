@@ -152,6 +152,7 @@ func (p *dtzProvider) DataSources(_ context.Context) []func() datasource.DataSou
 	return []func() datasource.DataSource{
 		newContainerRegistryDataSource,
 		newContextDataSource,
+		newContainersDomainDataSource,
 		newRss2emailFeedDataSource,
 		newRss2emailProfileDataSource,
 	}

@@ -83,7 +83,7 @@ func (d *containerRegistryDataSource) Read(ctx context.Context, req datasource.R
 		resp.Diagnostics.AddError("Client Error", fmt.Sprintf("Unable to read response body, got error: %s", err))
 		return
 	}
-	defer deferredCloseResponseBody(ctx, response.Body)
+	defer closeResponseBody(ctx, response.Body)
 
 	tflog.Info(ctx, fmt.Sprintf("status: %d, body: %s", response.StatusCode, string(body)))
 

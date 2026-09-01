@@ -97,7 +97,7 @@ func (d *rss2emailProfileResource) Create(ctx context.Context, req resource.Crea
 		resp.Diagnostics.AddError("Client Error", fmt.Sprintf("Unable to create profile, got error: %s", err))
 		return
 	}
-	defer deferredCloseResponseBody(ctx, res.Body)
+	defer closeResponseBody(ctx, res.Body)
 
 	resp_body, err := io.ReadAll(res.Body)
 	if err != nil {
@@ -142,14 +142,14 @@ func (d *rss2emailProfileResource) Read(ctx context.Context, req resource.ReadRe
 		resp.Diagnostics.AddError("Client Error", fmt.Sprintf("Unable to read profile, got error: %s", err))
 		return
 	}
-	defer deferredCloseResponseBody(ctx, response.Body)
+	defer closeResponseBody(ctx, response.Body)
 
 	body, err := io.ReadAll(response.Body)
 	if err != nil {
 		resp.Diagnostics.AddError("Client Error", fmt.Sprintf("Unable to read response body, got error: %s", err))
 		return
 	}
-	defer deferredCloseResponseBody(ctx, response.Body)
+	defer closeResponseBody(ctx, response.Body)
 
 	var profileResponse rss2emailProfileResponse
 	err = json.Unmarshal(body, &profileResponse)
@@ -208,7 +208,7 @@ func (d *rss2emailProfileResource) Update(ctx context.Context, req resource.Upda
 		resp.Diagnostics.AddError("Client Error", fmt.Sprintf("Unable to update profile, got error: %s", err))
 		return
 	}
-	defer deferredCloseResponseBody(ctx, res.Body)
+	defer closeResponseBody(ctx, res.Body)
 
 	resp_body, err := io.ReadAll(res.Body)
 	if err != nil {

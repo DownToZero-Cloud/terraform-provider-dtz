@@ -91,7 +91,7 @@ func (d *containersDomainDataSource) Read(ctx context.Context, req datasource.Re
 			resp.Diagnostics.AddError("Client Error", fmt.Sprintf("Unable to read response body, got error: %s", err))
 			return
 		}
-		defer deferredCloseResponseBody(ctx, response.Body)
+		defer closeResponseBody(ctx, response.Body)
 
 		if response.StatusCode == http.StatusNotFound {
 			resp.Diagnostics.AddError("Not Found", fmt.Sprintf("Domain '%s' not found", config.Name.ValueString()))
@@ -135,7 +135,7 @@ func (d *containersDomainDataSource) Read(ctx context.Context, req datasource.Re
 		resp.Diagnostics.AddError("Client Error", fmt.Sprintf("Unable to read response body, got error: %s", err))
 		return
 	}
-	defer deferredCloseResponseBody(ctx, response.Body)
+	defer closeResponseBody(ctx, response.Body)
 
 	var domains []containersDomainResponse
 	if err := json.Unmarshal(body, &domains); err != nil {

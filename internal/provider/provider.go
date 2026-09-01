@@ -184,7 +184,7 @@ func enableRss2EmailService(ctx context.Context, apiKey string) error {
 		return fmt.Errorf("error sending request: %w", err)
 	}
 
-	defer deferredCloseResponseBody(ctx, resp.Body)
+	defer closeResponseBody(ctx, resp.Body)
 
 	if resp.StatusCode != http.StatusOK {
 		return fmt.Errorf("unexpected status code: %d", resp.StatusCode)
@@ -207,7 +207,7 @@ func enableContainersService(ctx context.Context, apiKey string) error {
 	if err != nil {
 		return fmt.Errorf("error sending request: %w", err)
 	}
-	defer deferredCloseResponseBody(ctx, resp.Body)
+	defer closeResponseBody(ctx, resp.Body)
 
 	if resp.StatusCode != http.StatusOK {
 		return fmt.Errorf("unexpected status code: %d", resp.StatusCode)
@@ -230,7 +230,7 @@ func enableObjectstoreService(ctx context.Context, apiKey string) error {
 	if err != nil {
 		return fmt.Errorf("error sending request: %w", err)
 	}
-	defer deferredCloseResponseBody(ctx, resp.Body)
+	defer closeResponseBody(ctx, resp.Body)
 
 	if resp.StatusCode != http.StatusOK {
 		return fmt.Errorf("unexpected status code: %d", resp.StatusCode)
@@ -253,7 +253,7 @@ func enableContainerregistryService(ctx context.Context, apiKey string) error {
 	if err != nil {
 		return fmt.Errorf("error sending request: %w", err)
 	}
-	defer deferredCloseResponseBody(ctx, resp.Body)
+	defer closeResponseBody(ctx, resp.Body)
 
 	if resp.StatusCode != http.StatusOK {
 		return fmt.Errorf("unexpected status code: %d", resp.StatusCode)
@@ -276,7 +276,7 @@ func enableObservabilityService(ctx context.Context, apiKey string) error {
 	if err != nil {
 		return fmt.Errorf("error sending request: %w", err)
 	}
-	defer deferredCloseResponseBody(ctx, resp.Body)
+	defer closeResponseBody(ctx, resp.Body)
 
 	if resp.StatusCode != http.StatusOK {
 		return fmt.Errorf("unexpected status code: %d", resp.StatusCode)

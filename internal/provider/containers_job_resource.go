@@ -352,7 +352,7 @@ func (d *containersJobResource) Create(ctx context.Context, req resource.CreateR
 		resp.Diagnostics.AddError("Client Error", fmt.Sprintf("Unable to create job, got error: %s", err))
 		return
 	}
-	defer deferredCloseResponseBody(ctx, res.Body)
+	defer closeResponseBody(ctx, res.Body)
 
 	resp_body, err := io.ReadAll(res.Body)
 	if err != nil {
@@ -453,7 +453,7 @@ func (d *containersJobResource) Read(ctx context.Context, req resource.ReadReque
 		resp.Diagnostics.AddError("Client Error", fmt.Sprintf("Unable to read job, got error: %s", err))
 		return
 	}
-	defer deferredCloseResponseBody(ctx, response.Body)
+	defer closeResponseBody(ctx, response.Body)
 
 	body, err := io.ReadAll(response.Body)
 	if err != nil {
@@ -601,7 +601,7 @@ func (d *containersJobResource) Update(ctx context.Context, req resource.UpdateR
 		resp.Diagnostics.AddError("Client Error", fmt.Sprintf("Unable to update job, got error: %s", err))
 		return
 	}
-	defer deferredCloseResponseBody(ctx, res.Body)
+	defer closeResponseBody(ctx, res.Body)
 
 	resp_body, err := io.ReadAll(res.Body)
 	if err != nil {
@@ -704,7 +704,7 @@ func (d *containersJobResource) Delete(ctx context.Context, req resource.DeleteR
 		resp.Diagnostics.AddError("Client Error", fmt.Sprintf("Unable to delete job, got error: %s", err))
 		return
 	}
-	defer deferredCloseResponseBody(ctx, response.Body)
+	defer closeResponseBody(ctx, response.Body)
 
 	if response.StatusCode == http.StatusNotFound {
 		return

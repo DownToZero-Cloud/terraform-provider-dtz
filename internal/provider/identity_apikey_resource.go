@@ -117,7 +117,7 @@ func (d *identityApikeyResource) Create(ctx context.Context, req resource.Create
 		resp.Diagnostics.AddError("Client Error", fmt.Sprintf("Unable to create apikey, got error: %s", err))
 		return
 	}
-	defer deferredCloseResponseBody(ctx, res.Body)
+	defer closeResponseBody(ctx, res.Body)
 
 	resp_body, err := io.ReadAll(res.Body)
 	if err != nil {
@@ -164,7 +164,7 @@ func (d *identityApikeyResource) Read(ctx context.Context, req resource.ReadRequ
 		resp.Diagnostics.AddError("Client Error", fmt.Sprintf("Unable to read authentications, got error: %s", err))
 		return
 	}
-	defer deferredCloseResponseBody(ctx, response.Body)
+	defer closeResponseBody(ctx, response.Body)
 
 	body, err := io.ReadAll(response.Body)
 	if err != nil {
@@ -233,7 +233,7 @@ func (d *identityApikeyResource) Delete(ctx context.Context, req resource.Delete
 		resp.Diagnostics.AddError("Client Error", fmt.Sprintf("Unable to delete apikey, got error: %s", err))
 		return
 	}
-	defer deferredCloseResponseBody(ctx, response.Body)
+	defer closeResponseBody(ctx, response.Body)
 
 	if response.StatusCode == http.StatusNotFound {
 		return

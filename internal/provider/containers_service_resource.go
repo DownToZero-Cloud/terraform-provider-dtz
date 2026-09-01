@@ -205,7 +205,7 @@ func (d *containersServiceResource) Create(ctx context.Context, req resource.Cre
 		resp.Diagnostics.AddError("Client Error", fmt.Sprintf("Unable to create service, got error: %s", err))
 		return
 	}
-	defer deferredCloseResponseBody(ctx, res.Body)()
+	defer closeResponseBody(ctx, res.Body)
 
 	resp_body, err := io.ReadAll(res.Body)
 	if err != nil {
@@ -281,7 +281,7 @@ func (d *containersServiceResource) Read(ctx context.Context, req resource.ReadR
 		resp.Diagnostics.AddError("Client Error", fmt.Sprintf("Unable to read service, got error: %s", err))
 		return
 	}
-	defer deferredCloseResponseBody(ctx, response.Body)()
+	defer closeResponseBody(ctx, response.Body)
 
 	body, err := io.ReadAll(response.Body)
 	if err != nil {
@@ -424,7 +424,7 @@ func (d *containersServiceResource) Update(ctx context.Context, req resource.Upd
 		resp.Diagnostics.AddError("Client Error", fmt.Sprintf("Unable to update service, got error: %s", err))
 		return
 	}
-	defer deferredCloseResponseBody(ctx, res.Body)()
+	defer closeResponseBody(ctx, res.Body)
 
 	if res.StatusCode != http.StatusOK {
 		resp.Diagnostics.AddError("API Error", fmt.Sprintf("Unable to update service, status code: %d", res.StatusCode))
@@ -498,7 +498,7 @@ func (d *containersServiceResource) Delete(ctx context.Context, req resource.Del
 		resp.Diagnostics.AddError("Client Error", fmt.Sprintf("Unable to delete service, got error: %s", err))
 		return
 	}
-	defer deferredCloseResponseBody(ctx, response.Body)()
+	defer closeResponseBody(ctx, response.Body)
 
 	if response.StatusCode == http.StatusNotFound {
 		return

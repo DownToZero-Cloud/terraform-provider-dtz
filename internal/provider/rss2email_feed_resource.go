@@ -74,7 +74,7 @@ func (d *rss2emailFeedResource) Create(ctx context.Context, req resource.CreateR
 		resp.Diagnostics.AddError("Client Error", fmt.Sprintf("Unable to create feed, got error: %s", err))
 		return
 	}
-	defer deferredCloseResponseBody(ctx, httpResp.Body)
+	defer closeResponseBody(ctx, httpResp.Body)
 
 	if httpResp.StatusCode != http.StatusOK {
 		resp.Diagnostics.AddError("Client Error", fmt.Sprintf("Unable to create feed, status code: %d", httpResp.StatusCode))
@@ -122,7 +122,7 @@ func (d *rss2emailFeedResource) Delete(ctx context.Context, req resource.DeleteR
 		resp.Diagnostics.AddError("Client Error", fmt.Sprintf("Unable to delete feed, got error: %s", err))
 		return
 	}
-	defer deferredCloseResponseBody(ctx, response.Body)
+	defer closeResponseBody(ctx, response.Body)
 }
 
 // Update implements resource.Resource.
@@ -204,7 +204,7 @@ func (d *rss2emailFeedResource) Read(ctx context.Context, req resource.ReadReque
 		tflog.Error(ctx, "error fetching")
 		return
 	}
-	defer deferredCloseResponseBody(ctx, response.Body)
+	defer closeResponseBody(ctx, response.Body)
 	body, err := io.ReadAll(response.Body)
 	if err != nil {
 		tflog.Error(ctx, "error reading")

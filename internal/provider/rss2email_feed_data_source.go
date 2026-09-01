@@ -110,7 +110,7 @@ func (d *rss2emailFeedDataSource) Read(ctx context.Context, req datasource.ReadR
 		resp.Diagnostics.AddError("Client Error", fmt.Sprintf("Unable to read response body, got error: %s", err))
 		return
 	}
-	defer deferredCloseResponseBody(ctx, response.Body)
+	defer closeResponseBody(ctx, response.Body)
 	tflog.Info(ctx, fmt.Sprintf("rssFeedDataSource Read status: %d, body: %s", response.StatusCode, string(body[:])))
 
 	var resp_type rss2emailFeedResponse
